@@ -1,0 +1,33 @@
+# Advanced Memory Bank MCP - Development Environment
+# PostgreSQL with pgvector extension for testing
+
+version: '3.8'
+
+services:
+  postgres:
+    image: pgvector/pgvector:pg16
+    container_name: advanced-memory-bank-postgres
+    environment:
+      POSTGRES_DB: memory_bank_test
+      POSTGRES_USER: memory_user
+      POSTGRES_PASSWORD: memory_pass_dev
+      POSTGRES_HOST_AUTH_METHOD: trust
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./config/init.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U memory_user -d memory_bank_test"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - memory_bank_network
+
+volumes:
+  postgres_data:
+
+networks:
+  memory_bank_network:
+    driver: bridge
