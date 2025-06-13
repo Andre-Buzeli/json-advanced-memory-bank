@@ -1,0 +1,84 @@
+{
+  "name": "@andrebuzeli/advanced-json-memory-bank",
+  "version": "1.0.1",
+  "description": "Advanced JSON-based Memory Bank MCP server with modular architecture - Single JSON file per project with automatic backup - 15 MCP tools including advanced update operations, project reset, and summary management - Zero-dependency mode with built-in semantic search - Production ready with enhanced stability",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/andrebuzeli/advanced-json-memory-bank.git"
+  },
+  "keywords": [
+    "mcp",
+    "memory-bank",
+    "json-storage",
+    "modular-architecture",
+    "automatic-backup",
+    "advanced-operations",
+    "project-management",
+    "semantic-search",
+    "embeddings",
+    "cursor-improvements",
+    "vscode-compatible",
+    "cursor-compatible",
+    "structured-development",
+    "visual-workflow",
+    "documentation",
+    "creative-thinking",
+    "sequential-thinking",
+    "model-context-protocol",
+    "zero-dependency",
+    "file-based-storage"
+  ],
+  "main": "dist/main/index.js",
+  "files": [
+    "dist",
+    "config",
+    "templates",
+    "custom-instructions.md",
+    "custom-instructions-en.md",
+    "README.md",
+    "README-npm-en.md"
+  ],
+  "author": "Andre Buzeli (@andrebuzeli) - Advanced JSON Memory Bank",
+  "license": "MIT",
+  "type": "module",
+  "bin": {
+    "@andrebuzeli/advanced-json-memory-bank": "dist/main/index.js"
+  },
+  "scripts": {
+    "build": "tsc --noEmit false --skipLibCheck && shx chmod +x dist/main/index.js",
+    "start": "node dist/main/index.js",
+    "db:init": "node dist/database/initialize.js",
+    "db:migrate": "node dist/database/migrations/run-migrations.js",
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage"
+  },
+  "dependencies": {
+    "dotenv": "^16.4.5",
+    "fs-extra": "^11.2.0",
+    "lru-cache": "^10.2.0",
+    "path": "^0.12.7"
+  },
+  "optionalDependencies": {
+    "@modelcontextprotocol/sdk": "^1.12.0",
+    "pg": "^8.11.3",
+    "pg-hstore": "^2.3.4",
+    "postgres": "^3.4.3"
+  },
+  "devDependencies": {
+    "@types/benchmark": "^2.1.2",
+    "@types/fs-extra": "^11.0.4",
+    "@types/jest": "^29.5.14",
+    "@types/node": "^20.11.19",
+    "@types/pg": "^8.11.2",
+    "@typescript-eslint/eslint-plugin": "^8.33.0",
+    "@typescript-eslint/parser": "^8.33.0",
+    "benchmark": "^2.1.4",
+    "eslint": "^9.27.0",
+    "jest": "^29.7.0",
+    "rimraf": "^6.0.1",
+    "shx": "^0.4.0",
+    "ts-jest": "^29.3.4",
+    "typescript": "^5.8.2"
+  }
+}
