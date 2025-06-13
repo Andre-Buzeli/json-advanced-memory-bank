@@ -1,6 +1,6 @@
 {
   "name": "@andrebuzeli/advanced-json-memory-bank",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "Advanced JSON-based Memory Bank MCP server with modular architecture - Single JSON file per project with automatic backup - 15 MCP tools including advanced update operations, project reset, and summary management - Zero-dependency mode with built-in semantic search - Production ready with enhanced stability",
   "repository": {
     "type": "git",
