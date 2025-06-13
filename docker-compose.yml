@@ -1,0 +1,23 @@
+# Optional PostgreSQL with pgvector for advanced features
+# The system works 100% without this (zero-dependency mode)
+version: '3.8'
+services:
+  postgres:
+    image: pgvector/pgvector:pg15
+    environment:
+      POSTGRES_DB: memory_bank
+      POSTGRES_USER: memory_user
+      POSTGRES_PASSWORD: memory_pass
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./config/init.sql:/docker-entrypoint-initdb.d/init.sql
+    command: >
+      postgres -c shared_preload_libraries=vector
+               -c max_connections=200
+               -c shared_buffers=256MB
+               -c effective_cache_size=1GB
+
+volumes:
+  postgres_data:
