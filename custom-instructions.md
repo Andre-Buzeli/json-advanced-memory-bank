@@ -1,352 +1,286 @@
-# 📝 custom-instructions.md — Advanced Memory Bank MCP v2.1.0
+# 📝 custom-instructions.md — Advanced Memory Bank MCP v3.0.0
 
 ## 📌 Objetivo
-Este arquivo define as instruções customizadas para uso no campo "User Rules" do Cursor, otimizando a colaboração com o Advanced Memory Bank MCP (Model Context Protocol). Ele detalha a organização da memória, uso das 14 MCP tools otimizadas, padrões de workflow, melhores práticas e exemplos práticos para garantir máxima eficiência e contexto para o assistente de IA.
+Este arquivo define as instruções customizadas para uso no campo "User Rules" do Cursor, otimizando a colaboração com o Advanced Memory Bank MCP (Model Context Protocol) v3.0.0. Esta versão revolucionária elimina a necessidade de especificar `projectName` em todas as tools, usando detecção automática baseada na pasta aberta no IDE.
 
 ---
 
 ## 1️⃣ Regras Fundamentais
-1. **Sempre inicie qualquer sessão lendo as memórias do projeto** (`list_memories` para visão geral com resumos).
-2. **Todas as operações de memória devem ser feitas via MCP tools** (nunca manipule arquivos manualmente).
-3. **Mantenha a estrutura JSON unificada**: cada projeto deve ter um arquivo JSON principal para memória estruturada.
-4. **Backup automático e manual**: utilize `backup_memory` para garantir segurança dos dados.
-5. **Nunca misture memórias de projetos diferentes**: mantenha o isolamento e a integridade do contexto.
-6. **Use o CLI Dashboard quando disponível**: acesse `http://localhost:3001` para monitoramento em tempo real.
+1. **Sempre inicie qualquer sessão lendo as memórias do projeto** (`list_memories` - sem precisar de projectName!).
+2. **Todas as operações de memória são automáticas** - nunca mais especificar projeto manualmente.
+3. **O sistema detecta automaticamente** a pasta aberta no IDE como projeto ativo.
+4. **Zero configuração necessária** - tudo funciona automaticamente.
+5. **11 tools simplificadas** - removidas funcionalidades desnecessárias de backup e múltiplos projetos.
 
 ---
 
-## 2️⃣ Organização da Memória
-- **Memória centralizada por projeto**: Cada projeto possui um diretório dedicado e arquivos de memória (análises, status, decisões, etc.).
-- **Memórias dinâmicas**: Criadas conforme necessidade (análises, decisões criativas, logs de workflow, QA, templates de implementação, etc.).
-- **Templates**: Utilize os templates em `config/templates/` para decisões criativas, implementação e QA, adaptando o nível de complexidade conforme o contexto.
-- **Consolidação automática**: Memórias similares são fundidas automaticamente pelo sistema.
-- **Pruning inteligente**: Memórias menos relevantes são removidas quando necessário, preservando as essenciais.
-- **Backup**: O sistema realiza backups automáticos a cada 10 minutos com cooldown de 2 minutos entre backups e permite backups manuais via tool.
-- **Cache inteligente**: Sistema LRU que reduz operações I/O em 70% com TTL configurável.
+## 2️⃣ Revolução v3.0.0 - Auto-Detection
+- **Detecção Automática Total**: Usa `process.cwd()` para identificar projeto atual
+- **Sem Parâmetro `projectName`**: Todas as 11 tools funcionam sem especificar projeto
+- **Interface Ultra Limpa**: Parâmetros reduzidos ao essencial
+- **Zero Confusão**: Sem múltiplos projetos ou configurações complexas
+- **Lógica Simplificada**: Removido sistema de backup automático e manual
 
 ---
 
-## 3️⃣ Ferramentas MCP Otimizadas (14 Tools)
+## 3️⃣ Ferramentas MCP Simplificadas (11 Tools)
 
-### 🗃️ Core Memory Tools (6)
-1. **`list_projects`** - Lista todos os projetos disponíveis no memory bank
+### 🗃️ Core Memory Tools (5)
+1. **`list_memories`** - ⭐ **SEM projectName!** - Lista memórias com resumos breves
    ```json
-   { "tool": "list_projects" }
+   { "tool": "list_memories" }
    ```
 
-2. **`list_memories`** - ⭐ **NOVA/OTIMIZADA** - Lista todas as memórias com resumos breves e diretos
+2. **`memory_bank_read`** - Lê memória específica do projeto atual
    ```json
-   { "projectName": "meu-projeto" }
+   { "fileName": "analise.md" }
    ```
 
-3. **`memory_bank_read`** - Lê conteúdo de um arquivo de memória específico
+3. **`memory_bank_write`** - Cria nova memória no projeto atual
    ```json
-   { "projectName": "meu-projeto", "fileName": "analise.md" }
+   { "fileName": "analise.md", "content": "Análise detalhada..." }
    ```
 
-4. **`memory_bank_write`** - Cria novo arquivo de memória
+4. **`memory_bank_update`** - Atualiza memória existente (batch support)
    ```json
-   { "projectName": "meu-projeto", "fileName": "analise.md", "content": "Análise detalhada..." }
+   { "fileName": "notas.md", "content": "novo conteúdo", "operation": "append" }
    ```
 
-5. **`memory_bank_update`** - Atualiza arquivo existente (suporte batch e operações avançadas)
+5. **`memory_bank_reset`** - Reset completo do projeto atual
    ```json
-   { "projectName": "meu-projeto", "fileName": "notas.md", "content": "novo conteúdo", "operation": "append" }
-   ```
-
-6. **`memory_bank_reset`** - Reset completo de projeto (deleta todos os arquivos)
-   ```json
-   { "projectName": "meu-projeto", "createBackup": true }
+   { "createBackup": false }
    ```
 
 ### 🧠 Intelligence Tools (3)
-7. **`semantic_search`** - Busca semântica por similaridade usando embeddings nativos
+6. **`semantic_search`** - Busca semântica no projeto atual
    ```json
-   { "projectName": "meu-projeto", "query": "Como resolvemos o bug de autenticação?", "limit": 5 }
+   { "query": "Como resolvemos o bug de autenticação?", "limit": 5 }
    ```
 
-8. **`context_intelligence`** - Sugestões inteligentes de arquivos relevantes para a tarefa atual
+7. **`context_intelligence`** - Sugestões inteligentes do projeto atual
    ```json
-   { "taskDescription": "Implementar nova feature", "projectName": "meu-projeto", "maxSuggestions": 5 }
+   { "taskDescription": "Implementar nova feature", "maxSuggestions": 5 }
    ```
 
-9. **`memory_analyzer`** - Análise de dependências, órfãos e sugestões de limpeza
+8. **`memory_analyzer`** - Análise de dependências do projeto atual
    ```json
-   { "projectName": "meu-projeto", "analysisType": "all", "includeMetrics": true }
+   { "analysisType": "all", "includeMetrics": true }
    ```
 
 ### ⚙️ Workflow Tools (3)
-10. **`enhanced_thinking`** - Pensamento sequencial com branching e revisão
+9. **`enhanced_thinking`** - Pensamento sequencial com branching
     ```json
     { "thought": "Analisando arquitetura...", "nextThoughtNeeded": true, "thoughtNumber": 1, "totalThoughts": 5 }
     ```
 
-11. **`workflow_navigator`** - Navegação visual entre modos de desenvolvimento
+10. **`workflow_navigator`** - Navegação visual entre modos
     ```json
-    { "currentMode": "PLAN", "targetMode": "IMPLEMENT", "projectName": "meu-projeto" }
+    { "currentMode": "PLAN", "targetMode": "IMPLEMENT" }
     ```
 
-12. **`creative_analyzer`** - Análise criativa de trade-offs com matrizes de decisão
+11. **`creative_analyzer`** - Análise criativa de trade-offs
     ```json
-    { "component": "Database", "options": [{"name": "PostgreSQL", "pros": ["ACID"], "cons": ["Complexidade"]}], "criteria": ["Performance", "Custo"], "projectName": "meu-projeto" }
-    ```
-
-### 🔄 Advanced Tools (2)
-13. **`backup_memory`** - Backup manual de todos os projetos
-    ```json
-    { "customBackupDir": "./backups" }
-    ```
-
-14. **`optimize_json_memory`** - Otimização do arquivo JSON de memória
-    ```json
-    { "projectName": "meu-projeto", "options": { "removeEmpty": true, "deduplicate": true } }
+    { "component": "Database", "options": [{"name": "PostgreSQL", "pros": ["ACID"], "cons": ["Complexidade"]}], "criteria": ["Performance", "Custo"] }
     ```
 
 ---
 
-## 4️⃣ Workflow e Modos de Operação
-- **5 modos principais**: VAN → PLAN → CREATIVE → IMPLEMENT → QA
-- **Transições visuais**: Use diagramas Mermaid para mapear mudanças de modo e dependências
-- **Complexidade**: 4 níveis suportados (1 a 4) — escolha templates adequados ao nível
-- **Context Guidance**: Sempre consulte o modo atual antes de sugerir ações ou decisões
-- **Documentação de workflow**: Registre transições, decisões e aprendizados em arquivos de memória específicos
-- **CLI Dashboard**: Monitore métricas em tempo real via `http://localhost:3001`
-
----
-
-## 5️⃣ Padrões de Uso e Melhores Práticas
+## 4️⃣ Padrões de Uso v3.0.0
 
 ### ✅ DO (Práticas Recomendadas):
-- **Use sempre as ferramentas MCP** para operações de memória
-- **Use `list_memories` para visão geral** com resumos breves das memórias
+- **Use sempre as ferramentas MCP** sem especificar projectName
+- **Use `list_memories` para visão geral** (primeira tool a usar sempre!)
+- **Aproveite a simplicidade** - todas as tools detectam projeto automaticamente
 - **Utilize batch updates** para múltiplas alterações
-- **Mantenha backups regulares** (automático + manual quando necessário)
-- **Documente decisões importantes** em arquivos de memória usando templates
-- **Use `semantic_search`** para encontrar decisões e contextos anteriores
-- **Aproveite `context_intelligence`** para sugestões de arquivos relevantes
-- **Utilize `memory_analyzer`** para manter o projeto organizado
-- **Use `enhanced_thinking`** para decisões complexas com múltiplos passos
-- **Monitore performance** via CLI dashboard quando disponível
-- **Aproveite o cache LRU** que reduz I/O em 70%
+- **Documente decisões importantes** em arquivos de memória
+- **Use `semantic_search`** para encontrar contextos anteriores
+- **Aproveite `context_intelligence`** para sugestões relevantes
 
 ### ❌ DON'T (Práticas Proibidas):
-- **Não edite arquivos de memória manualmente** — use sempre as MCP tools
-- **Não ignore a listagem de memórias** — use `list_memories` para contexto inicial
-- **Não misture memórias de projetos diferentes** — mantenha isolamento
-- **Não apague arquivos core sem backup** — use `backup_memory` primeiro
-- **Não ignore sugestões do `context_intelligence`** — são baseadas em análise semântica
-- **Não faça múltiplos backups em sequência** — respeite o cooldown de 2 minutos
-- **Não negligencie a limpeza** — use `memory_analyzer` regularmente
+- **Não especifique projectName** - não existe mais esse parâmetro!
+- **Não tente configurar múltiplos projetos** - sistema usa apenas projeto atual
+- **Não ignore `list_memories`** - sempre use para contexto inicial
+- **Não tente fazer backup manual** - funcionalidade foi removida
+- **Não edite arquivos de memória manualmente** - use sempre as MCP tools
 
 ---
 
-## 6️⃣ Exemplos Práticos de Uso
+## 5️⃣ Exemplos Práticos v3.0.0
 
 ### 📖 Início de Sessão (Sempre):
 ```json
-// 1. Listar projetos disponíveis
-{ "tool": "list_projects" }
+// 1. Ver todas as memórias ⭐ MUITO MAIS SIMPLES!
+{ "tool": "list_memories" }
 
-// 2. Ver todas as memórias com resumos breves ⭐ NOVA ABORDAGEM
-{ "tool": "list_memories", "arguments": { "projectName": "meu-projeto" } }
-{ "tool": "memory_bank_read", "arguments": { "projectName": "meu-projeto", "fileName": "summary.md" } }
+// 2. Ler memória específica se necessário
+{ "tool": "memory_bank_read", "arguments": { "fileName": "summary.md" } }
 
 // 3. Buscar contexto relevante
-{ "tool": "context_intelligence", "arguments": { "taskDescription": "Implementar nova feature", "projectName": "meu-projeto" } }
+{ "tool": "context_intelligence", "arguments": { "taskDescription": "Implementar nova feature" } }
 ```
 
 ### 🔍 Busca e Análise:
 ```json
 // Buscar decisões anteriores
-{ "tool": "semantic_search", "arguments": { "projectName": "meu-projeto", "query": "Como implementamos autenticação?" } }
+{ "tool": "semantic_search", "arguments": { "query": "Como implementamos autenticação?" } }
 
-// Analisar dependências e órfãos
-{ "tool": "memory_analyzer", "arguments": { "projectName": "meu-projeto", "analysisType": "all" } }
+// Analisar dependências
+{ "tool": "memory_analyzer", "arguments": { "analysisType": "all" } }
 
-// Pensamento estruturado para decisões complexas
+// Pensamento estruturado
 { "tool": "enhanced_thinking", "arguments": { "thought": "Preciso analisar as opções de banco de dados...", "nextThoughtNeeded": true, "thoughtNumber": 1, "totalThoughts": 3 } }
 ```
 
-### 💾 Atualizações e Backup:
+### 💾 Criação e Atualização:
 ```json
-// Listar memórias com resumos breves (nova abordagem principal) ⭐
-{ "tool": "list_memories", "arguments": { "projectName": "meu-projeto" } }
-
-// Backup manual antes de mudanças importantes
-{ "tool": "backup_memory", "arguments": { "customBackupDir": "./backups/pre-refactor" } }
+// Criar nova memória
+{ "tool": "memory_bank_write", "arguments": { "fileName": "nova-funcionalidade.md", "content": "Documentação da nova feature..." } }
 
 // Batch update para múltiplas alterações
-{ "tool": "memory_bank_update", "arguments": { "projectName": "meu-projeto", "updates": [
-  { "fileName": "status.md", "content": "Em desenvolvimento", "operation": "update" },
-  { "fileName": "notas.md", "content": "Nova funcionalidade implementada", "operation": "append" }
-] } }
+{ "tool": "memory_bank_update", "arguments": { 
+  "updates": [
+    { "fileName": "status.md", "content": "Em desenvolvimento", "operation": "update" },
+    { "fileName": "notas.md", "content": "Nova funcionalidade implementada", "operation": "append" }
+  ] 
+}}
 ```
 
 ### 🎨 Análise Criativa:
 ```json
-// Análise de trade-offs para decisões técnicas
+// Análise de trade-offs
 { "tool": "creative_analyzer", "arguments": {
   "component": "Frontend Framework",
   "options": [
-    { "name": "React", "pros": ["Ecosistema maduro", "Performance"], "cons": ["Curva de aprendizado"] },
-    { "name": "Vue", "pros": ["Simplicidade", "Documentação"], "cons": ["Ecosistema menor"] }
+    { "name": "React", "pros": ["Ecosistema maduro"], "cons": ["Curva de aprendizado"] },
+    { "name": "Vue", "pros": ["Simplicidade"], "cons": ["Ecosistema menor"] }
   ],
-  "criteria": ["Performance", "Produtividade", "Manutenibilidade"],
-  "projectName": "meu-projeto"
-} }
+  "criteria": ["Performance", "Produtividade"]
+}}
 ```
 
 ---
 
-## 7️⃣ Estrutura JSON de Memória
+## 6️⃣ Benefícios da Simplificação v3.0.0
+
+### 🎯 Zero Configuração:
+- **Nunca mais especificar projectName**
+- **Detecção automática da pasta do IDE**
+- **Interface ultra limpa**
+- **Parâmetros reduzidos ao essencial**
+
+### ⚡ Performance Otimizada:
+- **11 tools vs 14** (removidas as desnecessárias)
+- **Sistema mais rápido** sem lógica de backup
+- **Menos complexidade** = mais velocidade
+- **Foco no essencial** = melhor UX
+
+### 🧹 Interface Limpa:
+- **Sem confusion de múltiplos projetos**
+- **Sem parâmetros desnecessários**
+- **Sem funcionalidades de backup**
+- **Foco na simplicidade absoluta**
+
+---
+
+## 7️⃣ Workflow e Modos (Simplificados)
+- **5 modos principais**: VAN → PLAN → CREATIVE → IMPLEMENT → QA
+- **Sem especificação de projeto**: Todas as tools usam projeto atual automaticamente
+- **Transições automáticas**: Workflow detecta contexto automaticamente
+- **Documentação simples**: Registre apenas em arquivos de memória essenciais
+
+---
+
+## 8️⃣ Integração com VS Code / Cursor
 ```json
 {
-  "project": "meu-projeto",
-  "summary": "Visão geral do projeto...",
-  "memories": {
-    "summary.md": "Resumo executivo do projeto...",
-    "analise-arquitetura.md": "Análise detalhada da arquitetura...",
-    "decisoes-tecnicas.md": "Log de decisões técnicas tomadas..."
-  },
-  "workflow": {
-    "mode": "IMPLEMENT",
-    "complexity": 3,
-    "lastTransition": "2025-06-14T10:30:00Z"
-  },
-  "metadata": {
-    "lastUpdated": "2025-06-15T10:30:00Z",
-    "totalMemories": 12,
-    "backupEnabled": true,
-    "cacheHitRate": 0.73
+  "mcpServers": {
+    "advanced-memory-bank": {
+      "command": "npx",
+      "args": ["-y", "@andrebuzeli/advanced-json-memory-bank"],
+      "env": {
+        "MEMORY_BANK_ROOT": "/path/to/memory/folder"
+      }
+    }
   }
 }
 ```
 
----
-
-## 8️⃣ CLI Development Dashboard
-
-### 🖥️ Acesso e Funcionalidades:
-- **URL**: `http://localhost:3001`
-- **Comando**: `npm run dev` ou `node scripts/dev-server.js`
-- **Features**:
-  - Métricas de cache em tempo real
-  - Estatísticas de backup
-  - Monitoramento de projetos
-  - APIs REST para integração
-
-### 📊 Endpoints Disponíveis:
-- `/` - Dashboard principal
-- `/api/stats` - Estatísticas JSON
-- `/api/refresh` - Forçar atualização de dados
+- **Zero configuração adicional**: Apenas especifique o diretório raiz
+- **Detecção automática**: Sistema identifica projeto pela pasta aberta
+- **11 tools prontas**: Todas funcionam sem configuração
 
 ---
 
-## 9️⃣ Integração com VS Code / Cursor
-- Configure o MCP server no settings.json do Cursor/VS Code conforme README
-- Use variáveis de ambiente: `MEMORY_BANK_ROOT`, `MEMORY_BANK_BACKUP`
-- Sempre habilite backup automático
-- Utilize o campo User Rules para inserir este arquivo e garantir que o assistente siga as práticas do projeto
-- Aproveite o cache LRU para performance otimizada
-- Use o CLI dashboard para monitoramento durante desenvolvimento
+## 9️⃣ Comparação de Versões
+
+### v2.1.0 (Anterior):
+```json
+{ "tool": "list_memories", "arguments": { "projectName": "meu-projeto" } }
+{ "tool": "memory_bank_write", "arguments": { "projectName": "meu-projeto", "fileName": "nota.md", "content": "..." } }
+```
+
+### v3.0.0 (Atual - MUITO MAIS SIMPLES!):
+```json
+{ "tool": "list_memories" }
+{ "tool": "memory_bank_write", "arguments": { "fileName": "nota.md", "content": "..." } }
+```
 
 ---
 
-## 🔟 Performance e Otimização
-
-### ⚡ Cache Inteligente:
-- **LRU Cache**: Reduz I/O em 70%
-- **TTL Configurável**: Entries expiram automaticamente
-- **Hit/Miss Stats**: Métricas via CLI dashboard
-- **Memory Limit**: Controle de uso de memória
-
-### 💾 Backup Inteligente:
-- **Cooldown**: 2 minutos entre backups automáticos
-- **Limpeza Automática**: Máximo 25 backups por projeto
-- **Validação**: Verificação de integridade
-- **Estrutura Organizada**: Backups agrupados por projeto
-
-### 🔍 Detecção Automática:
-- **Nome do Projeto**: Detectado via `process.cwd()`
-- **Sanitização**: Remove caracteres inválidos
-- **Override Manual**: Permite nome customizado
-- **Fallback**: Nome padrão se detecção falhar
-
----
-
-## 1️⃣1️⃣ Troubleshooting Avançado
+## 🔟 Troubleshooting v3.0.0
 
 ### 🔧 Problemas Comuns:
-- **Cache Miss Alto**: Verifique TTL e patterns de acesso
-- **Backup Excessivo**: Respeite cooldown de 2 minutos
-- **Memória Alta**: Use `optimize_json_memory` regularmente
-- **Órfãos**: Execute `memory_analyzer` para limpeza
+- **Projeto não detectado**: Verifique se está na pasta correta no IDE
+- **Memórias não encontradas**: Use `list_memories` para ver o que existe
+- **Tools não funcionam**: Certifique-se de não passar `projectName`
 
-### 🛠️ Comandos de Manutenção:
+### 🛠️ Comandos de Verificação:
 ```json
-// Otimizar memória JSON
-{ "tool": "optimize_json_memory", "arguments": { "projectName": "meu-projeto" } }
+// Verificar memórias disponíveis
+{ "tool": "list_memories" }
 
-// Análise completa do projeto
-{ "tool": "memory_analyzer", "arguments": { "projectName": "meu-projeto", "analysisType": "all" } }
+// Analisar projeto atual
+{ "tool": "memory_analyzer", "arguments": { "analysisType": "all" } }
 
-// Reset com backup de segurança
-{ "tool": "backup_memory", "arguments": {} }
-{ "tool": "memory_bank_reset", "arguments": { "projectName": "meu-projeto", "createBackup": true } }
+// Reset se necessário (sem backup)
+{ "tool": "memory_bank_reset", "arguments": { "createBackup": false } }
 ```
 
 ---
 
-## 1️⃣2️⃣ Referências e Templates
-- Consulte sempre `list_memories` para visão geral do projeto
-- Use templates de memória em `config/templates/` (creative, implementation, QA)
-- Exemplos de uso das 14 tools otimizadas estão documentados no README
-- Consulte a análise completa do codebase para entender arquitetura e padrões
-- Use o CLI dashboard para métricas em tempo real
-- Consulte memórias de modularização para entender arquitetura avançada
+## 1️⃣1️⃣ Resumo das Mudanças v3.0.0
+
+### ❌ REMOVIDO:
+- ❌ Parâmetro `projectName` de TODAS as tools
+- ❌ Tool `list_projects` (desnecessária)
+- ❌ Tool `backup_memory` (manual e automático)
+- ❌ Tool `optimize_json_memory` (automático agora)
+- ❌ Lógica de backup automático
+- ❌ Configuração de múltiplos projetos
+
+### ✅ MANTIDO/MELHORADO:
+- ✅ 11 tools essenciais e simplificadas
+- ✅ Detecção automática de projeto via `process.cwd()`
+- ✅ Interface ultra limpa
+- ✅ Performance otimizada
+- ✅ Zero configuração necessária
 
 ---
 
-## 1️⃣3️⃣ Atualização e Evolução
-- Revise e atualize este arquivo conforme o projeto evoluir
-- Adapte as regras para novos modos, ferramentas ou workflows
-- Incorpore feedback da equipe e da IA para melhoria contínua
-- Monitore performance via CLI dashboard
-- Use métricas de cache para otimizações
+## 🚀 REVOLUÇÃO v3.0.0 - AUTO-DETECTION
+
+### 🎯 Filosofia da Simplicidade:
+- **Uma pasta, um projeto**: Sempre usa a pasta aberta no IDE
+- **Zero configuração**: Tudo funciona automaticamente
+- **Interface limpa**: Parâmetros reduzidos ao essencial
+- **Foco no que importa**: Memória e produtividade
+
+### 📋 Como Usar (Super Simples):
+1. Abra uma pasta no IDE
+2. Use qualquer tool sem especificar projeto
+3. O sistema detecta automaticamente
+4. Pronto! 🎉
 
 ---
 
-## 🚀 NOVIDADES v2.1.0 - SISTEMA OTIMIZADO
-
-### ✅ Melhorias Principais:
-- **14 tools otimizadas** (removidas 2 tools desnecessárias)
-- **`list_memories` aprimorada** com resumos breves automáticos
-- **Interface mais limpa** sem informações desnecessárias
-- **Resumos inteligentes** extraídos automaticamente
-- **Sistema mais direto** e focado na qualidade
-
-### 🎯 Foco na Simplicidade:
-- Menos tools, mais qualidade
-- Resumos breves e diretos
-- Interface limpa sem "baboseira"
-- Funcionalidade otimizada
-
-### 📋 Exemplos da Nova `list_memories`:
-```
-# 📋 Memories: advanced-memory-bank-mcp
-
-**Total:** 13 memories
-
-1. **analise-memoria-calibrador-melhorias-mcp** - 🔧 ANÁLISE E MELHORIAS DO MCP SERVER
-2. **conclusao-final-sistema-universal** - 🎉 CONCLUSÃO: ADVANCED MEMORY BANK MCP - SISTEMA UNIVERSAL COMPLETO
-3. **implementacao-melhorias-mcp-progresso** - 🚀 IMPLEMENTAÇÃO DAS MELHORIAS DO MCP - CONCLUSÃO FINAL
-4. **publicacao-versao-2.1.0-otimizada** - 🚀 PUBLICAÇÃO VERSÃO 2.1.0 - SISTEMA OTIMIZADO E SIMPLIFICADO
-5. **simplificacao-sistema-tools-otimizadas** - 🎯 SIMPLIFICAÇÃO COMPLETA DO SISTEMA - TOOLS OTIMIZADAS
-
----
-*Updated: 2025-06-16*
-```
-
----
-
-*Advanced Memory Bank MCP v2.1.0 - Sistema Otimizado com 14 Tools Focadas na Qualidade*
+*Advanced Memory Bank MCP v3.0.0 - Auto-Project Detection - Zero Configuration Revolution*
