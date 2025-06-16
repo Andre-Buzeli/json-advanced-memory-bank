@@ -26,7 +26,7 @@ process.on('uncaughtException', (error) => {
 // Wrapper for dynamic imports with fallback
 async function startServer() {
   // Get version from package.json (simple approach)
-  let version = '3.0.0'; // fallback version
+  let version = '3.0.1'; // fallback version
   try {
     // Simple require approach that works in compiled JS
     const fs = await import('fs');
@@ -34,7 +34,7 @@ async function startServer() {
     const packageJsonPath = path.resolve(__dirname, '../../package.json');
     const packageJsonContent = await fs.promises.readFile(packageJsonPath, 'utf-8');
     const packageJson = JSON.parse(packageJsonContent);
-    version = packageJson.version ?? '3.0.0';
+    version = packageJson.version ?? '3.0.1';
   } catch {
     // Keep fallback version if reading fails - no error handling needed
   }
