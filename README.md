@@ -43,6 +43,7 @@ In standalone mode:
 - File-based memory storage is used without requiring PostgreSQL
 - Core tools (list_projects, memory_bank_read, etc.) are fully functional
 - Advanced semantic features gracefully degrade to simpler implementations
+- Configurable backup directory via `MEMORY_BANK_BACKUP` environment variable
 
 This makes deployment much easier in environments where installing dependencies might be challenging.
 

@@ -9,6 +9,9 @@ import {
   Tool
 } from '@modelcontextprotocol/sdk/types.js';
 import { MemoryManager } from '../core/memory-manager.js';
+import { SequentialThinking } from '../core/sequential-thinking.js';
+import { WorkflowNavigator } from '../core/workflow-navigator.js';
+import { CreativeAnalyzer } from '../core/creative-analyzer.js';
 import dotenv from 'dotenv';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -25,6 +28,9 @@ dotenv.config({ path: envPath });
 export class AdvancedMemoryBankServer {
   private server: Server;
   private memoryManager: MemoryManager;
+  private sequentialThinking: SequentialThinking;
+  private workflowNavigator: WorkflowNavigator;
+  private creativeAnalyzer: CreativeAnalyzer;
 
   constructor() {
     this.server = new Server(
@@ -40,6 +46,9 @@ export class AdvancedMemoryBankServer {
     );
 
     this.memoryManager = new MemoryManager();
+    this.sequentialThinking = new SequentialThinking();
+    this.workflowNavigator = new WorkflowNavigator();
+    this.creativeAnalyzer = new CreativeAnalyzer();
     this.setupToolHandlers();
   }
 
@@ -114,14 +123,14 @@ export class AdvancedMemoryBankServer {
               properties: {
                 projectName: {
                   type: 'string',
-                  description: 'The name of the project',
+                  description: 'The name of the project (uses auto-detected IDE folder name if not provided)',
                 },
                 fileName: {
                   type: 'string',
                   description: 'The name of the memory entry (with or without .md extension)',
                 },
               },
-              required: ['projectName', 'fileName'],
+              required: ['fileName'],
             },
           },
           {
@@ -133,7 +142,7 @@ export class AdvancedMemoryBankServer {
               properties: {
                 projectName: {
                   type: 'string',
-                  description: 'The name of the project',
+                  description: 'The name of the project (uses auto-detected IDE folder name if not provided)',
                 },
                 fileName: {
                   type: 'string',
@@ -144,7 +153,7 @@ export class AdvancedMemoryBankServer {
                   description: 'The content of the memory entry',
                 },
               },
-              required: ['projectName', 'fileName', 'content'],
+              required: ['fileName', 'content'],
             },
           },
           {
@@ -156,7 +165,7 @@ export class AdvancedMemoryBankServer {
               properties: {
                 projectName: {
                   type: 'string',
-                  description: 'The name of the project',
+                  description: 'The name of the project (uses auto-detected IDE folder name if not provided)',
                 },
                 fileName: {
                   type: 'string',
@@ -516,46 +525,18 @@ export class AdvancedMemoryBankServer {
             },
           },
           {
-            name: 'memory_bank_summary',
-            description: 'Get a summary of all modules/topics in a project memory bank',
+            name: 'list_memories',
+            description: 'List all memory entries with brief summaries for a specific project',
             inputSchema: {
               $schema: 'https://json-schema.org/draft-07/schema#',
               type: 'object',
               properties: {
                 projectName: {
                   type: 'string',
-                  description: 'The name of the project',
-                },
-                detailed: {
-                  type: 'boolean',
-                  description: 'Whether to include detailed information for each module (default: false)',
+                  description: 'The name of the project (uses auto-detected IDE folder name if not provided)',
                 },
               },
               required: ['projectName'],
-            },
-          },
-          {
-            name: 'memory_bank_summary_update',
-            description: 'Update the summary information for a project',
-            inputSchema: {
-              $schema: 'https://json-schema.org/draft-07/schema#',
-              type: 'object',
-              properties: {
-                projectName: {
-                  type: 'string',
-                  description: 'The name of the project',
-                },
-                summaryContent: {
-                  type: 'string',
-                  description: 'The new summary content',
-                },
-                operation: {
-                  type: 'string',
-                  enum: ['create', 'update', 'append'],
-                  description: 'Operation to perform (default: update)',
-                },
-              },
-              required: ['projectName', 'summaryContent'],
             },
           },
         ] as Tool[],
@@ -579,13 +560,13 @@ export class AdvancedMemoryBankServer {
 
           case 'memory_bank_read':
             return await this.readMemoryBankFile(
-              args.projectName as string,
+              args.projectName as string | undefined,
               args.fileName as string
             );
 
           case 'memory_bank_write':
             return await this.writeMemoryBankFile(
-              args.projectName as string,
+              args.projectName as string | undefined,
               args.fileName as string,
               args.content as string
             );
@@ -648,10 +629,10 @@ export class AdvancedMemoryBankServer {
             return await this.enhancedThinking(args);
 
           case 'workflow_navigator':
-            return await this.workflowNavigator(args);
+            return await this.processWorkflowNavigator(args);
 
           case 'creative_analyzer':
-            return await this.creativeAnalyzer(args);
+            return await this.processCreativeAnalyzer(args);
 
           case 'context_intelligence':
             return await this.contextIntelligence(args);
@@ -665,18 +646,8 @@ export class AdvancedMemoryBankServer {
           case 'optimize_json_memory':
             return await this.optimizeJsonMemory(args);
 
-          case 'memory_bank_summary':
-            return await this.getMemoryBankSummary(
-              args.projectName as string,
-              args.detailed as boolean
-            );
-
-          case 'memory_bank_summary_update':
-            return await this.updateMemoryBankSummary(
-              args.projectName as string,
-              args.summaryContent as string,
-              (args.operation as 'create' | 'update' | 'append') || 'update'
-            );
+          case 'list_memories':
+            return await this.listMemories(args.projectName as string);
 
           default:
             throw new Error(`Unknown tool: ${name}`);
@@ -715,10 +686,11 @@ export class AdvancedMemoryBankServer {
   /**
    * Create a manual backup of all projects
    * @param customBackupDir - Optional custom backup directory
+   * @param force - Optional flag to bypass cooldown
    * @returns Tool response
    */
-  private async backupMemory(customBackupDir?: string) {
-    const result = await this.memoryManager.createManualBackup(customBackupDir);
+  private async backupMemory(customBackupDir?: string, force?: boolean) {
+    const result = await this.memoryManager.createManualBackup(customBackupDir, force);
     
     return {
       content: [
@@ -732,12 +704,13 @@ export class AdvancedMemoryBankServer {
 
   /**
    * Read a memory entry from the memory bank
-   * @param projectName - Project name
+   * @param projectName - Project name (optional, uses auto-detected if not provided)
    * @param fileName - Memory entry name (with or without .md extension)
    * @returns Tool response
    */
-  private async readMemoryBankFile(projectName: string, fileName: string) {
-    const content = await this.memoryManager.readMemory(projectName, fileName);
+  private async readMemoryBankFile(projectName: string | undefined, fileName: string) {
+    const effectiveProjectName = projectName || this.memoryManager.getCurrentProjectName();
+    const content = await this.memoryManager.readMemory(effectiveProjectName, fileName);
     
     return {
       content: [
@@ -751,13 +724,14 @@ export class AdvancedMemoryBankServer {
 
   /**
    * Write a new memory entry to the memory bank
-   * @param projectName - Project name
+   * @param projectName - Project name (optional, uses auto-detected if not provided)
    * @param fileName - Memory entry name (with or without .md extension)
    * @param content - Memory entry content
    * @returns Tool response
    */
-  private async writeMemoryBankFile(projectName: string, fileName: string, content: string) {
-    const result = await this.memoryManager.writeMemory(projectName, fileName, content);
+  private async writeMemoryBankFile(projectName: string | undefined, fileName: string, content: string) {
+    const effectiveProjectName = projectName || this.memoryManager.getCurrentProjectName();
+    const result = await this.memoryManager.writeMemory(effectiveProjectName, fileName, content);
     
     return {
       content: [
@@ -826,42 +800,6 @@ export class AdvancedMemoryBankServer {
    * @param detailed - Whether to include detailed information
    * @returns Tool response
    */
-  private async getMemoryBankSummary(projectName: string, detailed: boolean = false) {
-    const result = await this.memoryManager.getProjectSummary(projectName, detailed);
-    
-    return {
-      content: [
-        {
-          type: 'text',
-          text: result,
-        },
-      ],
-    };
-  }
-
-  /**
-   * Update memory bank summary for a project
-   * @param projectName - Project name
-   * @param summaryContent - Summary content
-   * @param operation - Operation to perform
-   * @returns Tool response
-   */
-  private async updateMemoryBankSummary(
-    projectName: string, 
-    summaryContent: string, 
-    operation: 'create' | 'update' | 'append' = 'update'
-  ) {
-    const result = await this.memoryManager.updateProjectSummary(projectName, summaryContent, operation);
-    
-    return {
-      content: [
-        {
-          type: 'text',
-          text: result,
-        },
-      ],
-    };
-  }
 
   /**
    * Batch update memory bank files
@@ -942,12 +880,12 @@ export class AdvancedMemoryBankServer {
    * @returns Tool response
    */
   private async enhancedThinking(args: any) {
-    const result = await this.memoryManager.enhancedThinking(args);
+    const result = await this.sequentialThinking.processThought(args);
     return {
       content: [
         {
           type: 'text',
-          text: result,
+          text: JSON.stringify(result, null, 2),
         },
       ],
     };
@@ -958,8 +896,8 @@ export class AdvancedMemoryBankServer {
    * @param args - Tool arguments
    * @returns Tool response
    */
-  private async workflowNavigator(args: any) {
-    const result = await this.memoryManager.workflowNavigator(args);
+  private async processWorkflowNavigator(args: any) {
+    const result = await this.workflowNavigator.navigate(args);
     return {
       content: [
         {
@@ -975,8 +913,8 @@ export class AdvancedMemoryBankServer {
    * @param args - Tool arguments
    * @returns Tool response
    */
-  private async creativeAnalyzer(args: any) {
-    const result = await this.memoryManager.creativeAnalyzer(args);
+  private async processCreativeAnalyzer(args: any) {
+    const result = await this.creativeAnalyzer.analyze(args);
     return {
       content: [
         {
@@ -993,7 +931,13 @@ export class AdvancedMemoryBankServer {
    * @returns Tool response
    */
   private async contextIntelligence(args: any) {
-    const result = await this.memoryManager.contextIntelligence(args);
+    const { taskDescription, currentContext, projectName, maxSuggestions } = args;
+    const result = await this.memoryManager.getContextSuggestions(
+      projectName,
+      taskDescription,
+      currentContext || '',
+      maxSuggestions || 5
+    );
     return {
       content: [
         {
@@ -1010,7 +954,12 @@ export class AdvancedMemoryBankServer {
    * @returns Tool response
    */
   private async memoryAnalyzer(args: any) {
-    const result = await this.memoryManager.memoryAnalyzer(args);
+    const { projectName, analysisType, includeMetrics } = args;
+    const result = await this.memoryManager.analyzeMemory(
+      projectName,
+      analysisType || 'all',
+      includeMetrics !== false
+    );
     return {
       content: [
         {
@@ -1027,7 +976,53 @@ export class AdvancedMemoryBankServer {
    * @returns Tool response
    */
   private async semanticSearch(args: any) {
-    const result = await this.memoryManager.semanticSearch(args);
+    const { projectName, query, limit, similarityThreshold } = args;
+    const searchParams = {
+      project: projectName,
+      query: query,
+      limit: limit || 5,
+      similarityThreshold: similarityThreshold || 0.7
+    };
+    const result = await this.memoryManager.searchMemories(searchParams);
+    
+    // Format result as text
+    let resultText = `# 🔍 Semantic Search Results\n\n`;
+    resultText += `**Query:** "${query}"\n`;
+    resultText += `**Project:** ${projectName}\n`;
+    resultText += `**Total Matches:** ${result.totalMatches}\n\n`;
+    
+    if (result.memories.length > 0) {
+      resultText += `## Results:\n\n`;
+      for (let i = 0; i < result.memories.length; i++) {
+        const memory = result.memories[i];
+        const score = result.scores ? result.scores[i] : 0.5;
+        resultText += `### ${i + 1}. ${memory.title} (Score: ${Math.round(score * 10)}/10)\n\n`;
+        // Show first 200 characters of content
+        const preview = memory.content.slice(0, 200);
+        resultText += `${preview}${memory.content.length > 200 ? '...' : ''}\n\n---\n\n`;
+      }
+    } else {
+      resultText += `No results found for query "${query}"\n`;
+    }
+    
+    return {
+      content: [
+        {
+          type: 'text',
+          text: resultText,
+        },
+      ],
+    };
+  }
+
+  /**
+   * List all memory entry names with brief summaries for a project
+   * @param projectName - Project name
+   * @returns Tool response with memory names and brief summaries
+   */
+  private async listMemories(projectName: string) {
+    const result = await this.memoryManager.listMemoriesWithSummary(projectName);
+    
     return {
       content: [
         {

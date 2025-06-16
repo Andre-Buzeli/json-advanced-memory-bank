@@ -1,12 +1,12 @@
 #!/usr/bin/env node
 
 /**
- * Advanced JSON Memory Bank MCP v1.0.2 - Zero-Dependency Entry Point
+ * Advanced Memory Bank MCP v3.3.5 - Zero-Dependency Entry Point
  * Built-in AI embeddings using internal algorithms - No API keys required
  * Enhanced stability with standalone mode and JSON-RPC protocol compliance
  * 
  * @author Andre Buzeli
- * @version 1.0.2
+ * @version 3.3.5
  * @since 2025
  */
 
@@ -26,7 +26,7 @@ process.on('uncaughtException', (error) => {
 // Wrapper for dynamic imports with fallback
 async function startServer() {
   // Signal that server is starting
-  process.stderr.write(`[@andrebuzeli/advanced-json-memory-bank] Starting server v1.0.2...\n`);
+  process.stderr.write(`[@andrebuzeli/advanced-json-memory-bank] Starting server v1.0.0...\n`);
   
   try {
     // Try to load MCP SDK with timeout
@@ -46,7 +46,7 @@ async function startServer() {
     const { AdvancedMemoryBankServer } = serverImport;
     
     // Signal successful imports
-    process.stderr.write(`[@andrebuzeli/advanced-json-memory-bank] Modules loaded successfully\n`);
+    process.stderr.write(`[advanced-memory-bank] Modules loaded successfully\n`);
     
     // Create and run the server with MCP SDK
     const server = new AdvancedMemoryBankServer();
