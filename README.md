@@ -1,19 +1,36 @@
-# Advanced Memory Bank MCP
+# Advanced Memory Bank MCP v3.0.0 - Auto-Project Detection
 
-A truly zero-dependency memory system for AI assistants, implementing the Model Context Protocol (MCP). This advanced version works out of the box with local file-based storage and built-in embedding algorithms, requiring no external services.
+Uma sistema de memória inteligente com detecção automática de projeto para assistentes IA, implementando o Model Context Protocol (MCP). Esta versão revolucionária elimina a necessidade de configuração manual de projetos e oferece 11 tools simplificadas.
 
-## 🚀 Features
+## 🚀 Novidades v3.0.0 - Auto-Project Detection
 
-- **Built-in Semantic Understanding**: Local embedding algorithm with zero external dependencies
-- **File-based Storage**: Works completely offline with local markdown files
-- **Memory Consolidation**: Automatic merging of similar content
-- **Dynamic Importance**: Weight memories based on access patterns and context
-- **Adaptive Pruning**: Smart memory management when limits are reached
-- **Enhanced Workflows**: Visual guidance through development phases
-- **Creative Analysis**: Trade-off matrices and decision support
-- **Context Intelligence**: AI-powered relevant memory suggestions
-- **Zero-Dependency Mode**: Complete functionality without external dependencies
-- **Optional Database Integration**: PostgreSQL with pgvector available as an optional feature
+- **🎯 Zero Configuração**: Nunca mais precisar passar `projectName` - detecção automática total
+- **✅ 11 Tools Simplificadas**: Removidas funcionalidades desnecessárias de backup e múltiplos projetos
+- **🔍 Detecção Inteligente**: Sempre usa a pasta aberta no IDE automaticamente
+- **🧹 Interface Ultra Limpa**: Sem parâmetros confusos, foco na simplicidade absoluta
+- **⚡ Performance Otimizada**: Sistema mais rápido e direto sem lógica desnecessária
+
+## 🛠️ 11 Tools Disponíveis
+
+### 🗃️ Core Memory Tools (5)
+
+1. **`list_memories`** - Lista memórias com resumos breves (sem projectName!)
+2. **`memory_bank_read`** - Lê memória específica do projeto atual
+3. **`memory_bank_write`** - Cria nova memória no projeto atual
+4. **`memory_bank_update`** - Atualiza memória (batch support, projeto atual)
+5. **`memory_bank_reset`** - Reset completo do projeto atual
+
+### 🧠 Intelligence Tools (3)
+
+1. **`semantic_search`** - Busca semântica inteligente no projeto atual
+2. **`context_intelligence`** - Sugestões contextuais do projeto atual
+3. **`memory_analyzer`** - Análise de dependências do projeto atual
+
+### ⚙️ Workflow Tools (3)
+
+1. **`enhanced_thinking`** - Pensamento sequencial
+2. **`workflow_navigator`** - Navegação de modos
+3. **`creative_analyzer`** - Análise criativa
 
 ## 📋 Requirements
 
@@ -47,16 +64,73 @@ In standalone mode:
 
 This makes deployment much easier in environments where installing dependencies might be challenging.
 
-## 🔧 Installation
+## 🔧 Instalação
 
-### Simple Installation (Zero Configuration)
+### Instalação Simples (Zero Configuração)
 
 ```bash
-# NPM installation
-npm install @andrebuzeli/advanced-memory-bank
+# Instalação via NPM
+npm install @andrebuzeli/advanced-json-memory-bank
 
-# Or use directly with npx
-npx @andrebuzeli/advanced-memory-bank
+# Ou use diretamente com npx
+npx @andrebuzeli/advanced-json-memory-bank
+```
+
+### Configuração no VS Code/Cursor
+
+Adicione ao seu `settings.json`:
+
+```json
+{
+  "mcpServers": {
+    "advanced-memory-bank": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@andrebuzeli/advanced-json-memory-bank"
+      ],
+      "env": {
+        "MEMORY_BANK_ROOT": "/path/to/memory/folder"
+      }
+    }
+  }
+}
+```
+
+## ⭐ Exemplo de Uso - Simplicidade Total v3.0.0
+
+A nova abordagem elimina completamente a necessidade de especificar projeto:
+
+```json
+{
+  "tool": "list_memories"
+}
+```
+
+**Resultado automático do projeto atual:**
+```
+# 📋 Memories: advanced-memory-bank-mcp
+
+**Total:** 5 memories
+
+1. **configuracao-inicial** - Setup do projeto com Node.js e dependências básicas
+2. **implementacao-api** - Desenvolvimento da API REST com autenticação JWT
+3. **testes-unitarios** - Criação de testes para validação das funções principais
+4. **deploy-producao** - Deploy no Heroku com configuração de variáveis de ambiente
+5. **bugs-resolvidos** - Lista de bugs encontrados e suas respectivas correções
+
+---
+*Updated: 2025-06-16*
+```
+
+### Todas as Tools São Assim Agora:
+
+```json
+// Antes (v2.1.0)
+{"tool": "memory_bank_write", "arguments": {"projectName": "meu-projeto", "fileName": "nota.md", "content": "..."}}
+
+// Agora (v3.0.0) - MUITO MAIS SIMPLES!
+{"tool": "memory_bank_write", "arguments": {"fileName": "nota.md", "content": "..."}}
 ```
 
 ### Development Installation

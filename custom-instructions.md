@@ -1,7 +1,7 @@
-# 📝 custom-instructions.md — Advanced Memory Bank MCP v2.1.0
+# 📝 custom-instructions.md — Advanced Memory Bank MCP v3.0.0
 
 ## 📌 Objetivo
-Este arquivo define as instruções customizadas para uso no campo "User Rules" do Cursor, otimizando a colaboração com o Advanced Memory Bank MCP (Model Context Protocol). Ele detalha a organização da memória, uso das 14 MCP tools otimizadas, padrões de workflow, melhores práticas e exemplos práticos para garantir máxima eficiência e contexto para o assistente de IA.
+Este arquivo define as instruções customizadas para uso no campo "User Rules" do Cursor, otimizando a colaboração com o Advanced Memory Bank MCP (Model Context Protocol). Ele detalha a organização da memória, uso das 11 MCP tools universais, padrões de workflow, melhores práticas e exemplos práticos para garantir máxima eficiência e contexto para o assistente de IA.
 
 ---
 
@@ -316,13 +316,11 @@ Este arquivo define as instruções customizadas para uso no campo "User Rules" 
 
 ---
 
-## 🚀 NOVIDADES v2.1.0 - SISTEMA OTIMIZADO
-- **Backup manual:**
-  ```json
-  { "tool": "backup_memory", "arguments": { "customBackupDir": "./backups" } }
-  ```
-- **Batch update:**
-  ```json
+## 🚀 REVOLUÇÃO v3.0.0 - SISTEMA UNIVERSAL AUTO-DETECÇÃO
+- **Auto-detecção de projeto:** Detecta automaticamente o projeto da pasta aberta no IDE
+- **Sem parâmetro projectName:** Todas as tools operam sem precisar especificar projeto
+- **11 tools universais:** Sistema simplificado removendo backup e listagem de projetos
+- **Configuração zero:** Funciona imediatamente sem configuração manual
   { "projectName": "my-project", "updates": [ { "fileName": "notes.md", "content": "novo conteúdo" }, { "fileName": "summary.md", "removeText": "linha antiga" } ] }
   ```
 
@@ -414,13 +412,14 @@ Este arquivo define as instruções customizadas para uso no campo "User Rules" 
 
 ---
 
-## 🚀 NOVIDADES v2.1.0 - SISTEMA OTIMIZADO
-### ✅ Melhorias Principais:
-- **14 tools otimizadas** (removidas 2 tools desnecessárias)
-- **`list_memories` aprimorada** com resumos breves automáticos
-- **Interface mais limpa** sem informações desnecessárias
-- **Resumos inteligentes** extraídos automaticamente
-- **Sistema mais direto** e focado na qualidade
+## 🚀 REVOLUÇÃO v3.0.0 - SISTEMA UNIVERSAL AUTO-DETECÇÃO
+
+### ✅ Mudanças Revolucionárias:
+- **11 tools universais** (removidas tools de backup e listagem de projetos)
+- **Auto-detecção automática** do projeto da pasta aberta no IDE
+- **Zero configuração** - funciona imediatamente sem setup
+- **Sem parâmetro projectName** - todas as tools operam automaticamente
+- **Sistema mais limpo** focado na funcionalidade essencial
 
 ### 🎯 Foco na Simplicidade:
 - Menos tools, mais qualidade
@@ -430,4 +429,4 @@ Este arquivo define as instruções customizadas para uso no campo "User Rules" 
 
 ---
 
-*Advanced Memory Bank MCP v2.1.0 - Sistema Otimizado com 14 Tools Focadas na Qualidade*
+*Advanced Memory Bank MCP v3.0.0 - Sistema Universal com Auto-Detecção e 11 Tools Universais*

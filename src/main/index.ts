@@ -25,8 +25,22 @@ process.on('uncaughtException', (error) => {
 
 // Wrapper for dynamic imports with fallback
 async function startServer() {
+  // Get version from package.json (simple approach)
+  let version = '3.0.0'; // fallback version
+  try {
+    // Simple require approach that works in compiled JS
+    const fs = await import('fs');
+    const path = await import('path');
+    const packageJsonPath = path.resolve(__dirname, '../../package.json');
+    const packageJsonContent = await fs.promises.readFile(packageJsonPath, 'utf-8');
+    const packageJson = JSON.parse(packageJsonContent);
+    version = packageJson.version ?? '3.0.0';
+  } catch {
+    // Keep fallback version if reading fails - no error handling needed
+  }
+  
   // Signal that server is starting
-  process.stderr.write(`[@andrebuzeli/advanced-json-memory-bank] Starting server v1.0.0...\n`);
+  process.stderr.write(`[@andrebuzeli/advanced-json-memory-bank] Starting server v${version}...\n`);
   
   try {
     // Try to load MCP SDK with timeout
@@ -36,11 +50,11 @@ async function startServer() {
     ]);
     
     // Set timeout for imports
-    const timeoutPromise = new Promise((_, reject) => 
+    const timeoutPromise = new Promise<never>((_, reject) => 
       setTimeout(() => reject(new Error('Import timeout')), IMPORT_TIMEOUT));
     
     // Wait for imports or timeout
-    const [sdkImport, serverImport] = await Promise.race([importPromise, timeoutPromise]);
+    const [sdkImport, serverImport] = await Promise.race([importPromise, timeoutPromise]) as [any, any];
     
     const { StdioServerTransport } = sdkImport;
     const { AdvancedMemoryBankServer } = serverImport;
@@ -51,11 +65,11 @@ async function startServer() {
     // Create and run the server with MCP SDK
     const server = new AdvancedMemoryBankServer();
     await server.connect(new StdioServerTransport());
-  } catch (error) {
+  } catch (error: any) {
     // If error is about timeout or dependency, try standalone mode
-    if (error.code === 'ERR_MODULE_NOT_FOUND' || 
-        error.message.includes('timeout') || 
-        error.message.includes('504')) {
+    if (error?.code === 'ERR_MODULE_NOT_FOUND' || 
+        error?.message?.includes('timeout') || 
+        error?.message?.includes('504')) {
       
       process.stderr.write(`[advanced-memory-bank] SDK import failed, trying standalone mode\n`);
       
