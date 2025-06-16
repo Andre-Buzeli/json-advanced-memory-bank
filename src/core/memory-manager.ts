@@ -214,7 +214,7 @@ export class MemoryManager {
       metadata: {
         lastUpdated: new Date().toISOString(),
         totalMemories: 0,
-        version: '3.0.0'
+        version: '3.0.5'
       }
     };
   }
@@ -236,7 +236,7 @@ export class MemoryManager {
       metadata: {
         lastUpdated: new Date().toISOString(),
         totalMemories: Object.keys(data.memories || {}).length,
-        version: '3.0.0',
+        version: '3.0.5',
         ...data.metadata
       }
     };

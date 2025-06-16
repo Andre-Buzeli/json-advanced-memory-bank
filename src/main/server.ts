@@ -34,7 +34,7 @@ export class AdvancedMemoryBankServer {
   private sequentialThinking: SequentialThinking;
   private workflowNavigator: WorkflowNavigator;
   private creativeAnalyzer: CreativeAnalyzer;
-  private version: string = '3.0.4'; // fallback version
+  private version: string = '3.0.5'; // fallback version
 
   /**
    * Read version from package.json
@@ -52,7 +52,7 @@ export class AdvancedMemoryBankServer {
 
   constructor() {
     // Initialize version synchronously first, will be updated in initialize()
-    this.version = '3.0.4';
+    this.version = '3.0.5';
     
     this.server = new Server(
       {
