@@ -1,32 +1,37 @@
 {
   "name": "@andrebuzeli/advanced-json-memory-bank",
-  "version": "1.0.2",
-  "description": "Advanced JSON-based Memory Bank MCP server with modular architecture - Single JSON file per project with automatic backup - 15 MCP tools including advanced update operations, project reset, and summary management - Zero-dependency mode with built-in semantic search - Production ready with enhanced stability",
+  "version": "2.1.0",
+  "description": "Universal Advanced Memory Bank MCP - Streamlined intelligent memory management with 14 optimized tools. Smart summaries, clean interface, zero fluff. Perfect for any domain/language with AI-powered brief summaries and direct memory listing.",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/Andre-Buzeli/json-advanced-memory-bank.git"
+    "url": "git+https://github.com/andrebuzeli/advanced-json-memory-bank.git"
   },
   "keywords": [
     "mcp",
     "memory-bank",
-    "json-storage",
-    "modular-architecture",
-    "automatic-backup",
-    "advanced-operations",
-    "project-management",
+    "universal-system",
+    "ai-powered",
+    "multi-language",
+    "multi-domain",
+    "smart-analysis",
+    "automatic-insights",
+    "configurable",
+    "zero-hardcoding",
+    "content-analysis",
+    "smart-summary",
     "semantic-search",
+    "project-management",
+    "knowledge-management",
+    "academic-research",
+    "business-intelligence",
+    "software-development",
+    "json-storage",
     "embeddings",
-    "cursor-improvements",
-    "vscode-compatible",
     "cursor-compatible",
-    "structured-development",
-    "visual-workflow",
-    "documentation",
-    "creative-thinking",
-    "sequential-thinking",
+    "vscode-compatible",
     "model-context-protocol",
-    "zero-dependency",
-    "file-based-storage"
+    "typescript",
+    "zero-dependency"
   ],
   "main": "dist/main/index.js",
   "files": [
@@ -42,7 +47,7 @@
   "license": "MIT",
   "type": "module",
   "bin": {
-    "@andrebuzeli/advanced-json-memory-bank": "dist/main/index.js"
+    "advanced-json-memory-bank": "dist/main/index.js"
   },
   "scripts": {
     "build": "tsc --noEmit false --skipLibCheck && shx chmod +x dist/main/index.js",
