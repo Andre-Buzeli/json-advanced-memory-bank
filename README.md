@@ -1,26 +1,45 @@
-# Advanced Memory Bank MCP
+# Advanced Memory Bank MCP v2.1.0 - Sistema Otimizado
 
-A truly zero-dependency memory system for AI assistants, implementing the Model Context Protocol (MCP). This advanced version works out of the box with local file-based storage and built-in embedding algorithms, requiring no external services.
+Uma sistema de memória inteligente e otimizado para assistentes IA, implementando o Model Context Protocol (MCP). Esta versão focada na qualidade oferece 14 tools especializadas com interface limpa e resumos automáticos.
 
-## 🚀 Features
+## 🚀 Novidades v2.1.0 - Sistema Otimizado
 
-- **Built-in Semantic Understanding**: Local embedding algorithm with zero external dependencies
-- **File-based Storage**: Works completely offline with local markdown files
-- **Memory Consolidation**: Automatic merging of similar content
-- **Dynamic Importance**: Weight memories based on access patterns and context
-- **Adaptive Pruning**: Smart memory management when limits are reached
-- **Enhanced Workflows**: Visual guidance through development phases
-- **Creative Analysis**: Trade-off matrices and decision support
-- **Context Intelligence**: AI-powered relevant memory suggestions
-- **Zero-Dependency Mode**: Complete functionality without external dependencies
-- **Optional Database Integration**: PostgreSQL with pgvector available as an optional feature
+- **✅ 14 Tools Focadas na Qualidade**: Removidas tools desnecessárias, mantidas apenas as essenciais
+- **✅ List Memories Otimizada**: Resumos breves automáticos na listagem de memórias
+- **✅ Interface Mais Limpa**: Sem informações desnecessárias, foco na simplicidade
+- **✅ Resumos Inteligentes**: Extração automática da primeira linha significativa (70 chars max)
+- **✅ Sistema Universal**: Funciona com qualquer domínio/idioma sem hardcoding
+
+## 🛠️ 14 Tools Disponíveis
+
+### 🗃️ Core Memory Tools (6)
+1. **`list_projects`** - Lista todos os projetos
+2. **`list_memories`** ⭐ **OTIMIZADA** - Lista memórias com resumos breves
+3. **`memory_bank_read`** - Lê memória específica
+4. **`memory_bank_write`** - Cria nova memória
+5. **`memory_bank_update`** - Atualiza memória (batch support)
+6. **`memory_bank_reset`** - Reset completo do projeto
+
+### 🧠 Intelligence Tools (3)
+7. **`semantic_search`** - Busca semântica inteligente
+8. **`context_intelligence`** - Sugestões contextuais
+9. **`memory_analyzer`** - Análise de dependências
+
+### ⚙️ Workflow Tools (3)
+10. **`enhanced_thinking`** - Pensamento sequencial
+11. **`workflow_navigator`** - Navegação de modos
+12. **`creative_analyzer`** - Análise criativa
+
+### 🔄 Advanced Tools (2)
+13. **`backup_memory`** - Backup manual
+14. **`optimize_json_memory`** - Otimização JSON
 
 ## 📋 Requirements
 
 - Node.js 18+ (ECMAScript modules support)
 - Nothing else! (PostgreSQL and OpenAI are completely optional)
 
-## 🆕 Standalone Mode (v1.0.2+)
+## 🆕 Standalone Mode (v3.2.3+)
 
 The Advanced Memory Bank MCP now features a standalone mode that automatically activates when the MCP SDK is not available. This makes it perfect for use with `npx`:
 
@@ -30,7 +49,7 @@ The Advanced Memory Bank MCP now features a standalone mode that automatically a
   "command": "npx",
   "args": [
     "-y",
-    "@andrebuzeli/advanced-json-memory-bank"
+    "@andrebuzeli/advanced-memory-bank"
   ],
   "env": {
     "MEMORY_BANK_ROOT": "/path/to/memory/folder"
@@ -43,27 +62,78 @@ In standalone mode:
 - File-based memory storage is used without requiring PostgreSQL
 - Core tools (list_projects, memory_bank_read, etc.) are fully functional
 - Advanced semantic features gracefully degrade to simpler implementations
+- Configurable backup directory via `MEMORY_BANK_BACKUP` environment variable
 
 This makes deployment much easier in environments where installing dependencies might be challenging.
 
-## 🔧 Installation
+## 🔧 Instalação
 
-### Simple Installation (Zero Configuration)
+### Instalação Simples (Zero Configuração)
 
 ```bash
-# NPM installation
+# Instalação via NPM
 npm install @andrebuzeli/advanced-json-memory-bank
 
-# Or use directly with npx
+# Ou use diretamente com npx
 npx @andrebuzeli/advanced-json-memory-bank
+```
+
+### Configuração no VS Code/Cursor
+
+Adicione ao seu `settings.json`:
+
+```json
+{
+  "mcpServers": {
+    "advanced-memory-bank": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@andrebuzeli/advanced-json-memory-bank"
+      ],
+      "env": {
+        "MEMORY_BANK_ROOT": "/path/to/memory/folder"
+      }
+    }
+  }
+}
+```
+
+## ⭐ Exemplo de Uso - Tool `list_memories` Otimizada
+
+A nova tool principal retorna resumos breves automáticos:
+
+```json
+{
+  "tool": "list_memories",
+  "arguments": {
+    "projectName": "meu-projeto"
+  }
+}
+```
+
+**Resultado:**
+```
+# 📋 Memories: meu-projeto
+
+**Total:** 5 memories
+
+1. **configuracao-inicial** - Setup do projeto com Node.js e dependências básicas
+2. **implementacao-api** - Desenvolvimento da API REST com autenticação JWT
+3. **testes-unitarios** - Criação de testes para validação das funções principais
+4. **deploy-producao** - Deploy no Heroku com configuração de variáveis de ambiente
+5. **bugs-resolvidos** - Lista de bugs encontrados e suas respectivas correções
+
+---
+*Updated: 2025-06-15*
 ```
 
 ### Development Installation
 
 ```bash
 # Clone the repository
-git clone https://github.com/Andre-Buzeli/json-advanced-memory-bank.git
-cd json-advanced-memory-bank
+git clone https://github.com/andrebuzeli/advanced-memory-bank.git
+cd advanced-memory-bank-mcp
 
 # Install dependencies
 npm install
@@ -74,6 +144,34 @@ npm run build
 # Run the MCP server
 npm run start
 ```
+
+## 💾 Database Setup
+
+### Setting Up PostgreSQL with pgvector
+
+1. Install PostgreSQL 14 or later
+2. Install pgvector extension:
+
+```sql
+CREATE EXTENSION vector;
+```
+
+3. Create a database for memory storage:
+
+```sql
+CREATE DATABASE memory_bank;
+```
+
+4. Run the initialization script:
+
+```bash
+npm run db:init
+```
+
+This will:
+- Create necessary tables for memory storage
+- Set up indexes for vector similarity search
+- Initialize the memory structure
 
 ## 🖥️ VS Code / Cursor Integration
 
@@ -86,7 +184,7 @@ Add the MCP to your VS Code or Cursor settings.json:
     "command": "npx",
     "args": [
       "-y",
-      "@andrebuzeli/advanced-json-memory-bank"
+      "@andrebuzeli/advanced-memory-bank"
     ],
     "env": {
       "MEMORY_BANK_ROOT": "/path/to/memory/folder"
@@ -97,36 +195,78 @@ Add the MCP to your VS Code or Cursor settings.json:
 
 That's it! No database setup, API keys, or additional configuration required.
 
-## 📦 MCP Tools (15 total)
+## 🔄 Memory System Architecture
 
-### 🗃️ Core Memory Tools (6)
-1. **`list_projects`** - List all projects in memory bank
-2. **`list_project_files`** - List files in a specific project  
-3. **`memory_bank_read`** - Read specific memory entry
-4. **`memory_bank_write`** - Create new memory entry
-5. **`memory_bank_update`** - Update existing memory with advanced operations
-6. **`memory_bank_reset`** - Reset project with automatic backup
+### Memory Storage Architecture
 
-### 🧠 Intelligence Tools (3)
-7. **`context_intelligence`** - AI-powered relevant memory suggestions
-8. **`memory_analyzer`** - Analyze dependencies, orphans, and cleanup suggestions
-9. **`semantic_search`** - Search memory using natural language with built-in embeddings
+```
+┌────────────────┐     ┌─────────────────┐     ┌──────────────┐
+│ Memory Manager │────>│ Built-in Vector │────>│ Local        │
+│                │<────│ Embeddings      │<────│ File System  │
+└────────────────┘     └─────────────────┘     └──────────────┘
+        │                                             │
+        │                                             │
+┌────────────────┐                            ┌──────────────┐
+│ Optional DB    │<---------------------------│ Memory Banks │
+│ (if enabled)   │                            │ Directory    │
+└────────────────┘                            └──────────────┘
+```
 
-### ⚙️ Workflow Tools (3) 
-10. **`enhanced_thinking`** - Sequential thinking with branching and visual context
-11. **`workflow_navigator`** - Navigate through development workflow phases
-12. **`creative_analyzer`** - Creative analysis with trade-off matrices
+### Memory Types
 
-### 🛠️ Management Tools (3)
-13. **`backup_memory`** - Create manual backup of all projects
-14. **`get_project_summary`** - Get structured project overview
-15. **`optimize_memory`** - Optimize memory usage and clean orphaned entries
+The system maintains various types of memories:
+
+- **Core Memories**: Always present (`summary.md`, `status.md`, etc.)
+- **Dynamic Memories**: Created as needed (analyses, creative decisions, etc.)
 
 ## 🔄 Backup System
 
 ### Automatic Backup Configuration
 
-The system includes an automatic backup feature that creates timestamped backups every 5 minutes of the active project only.
+The system includes an automatic backup feature that creates timestamped backups every 5 minutes.
+
+**Environment Variables:**
+
+```bash
+# Main memory bank directory
+MEMORY_BANK_ROOT=./memory-banks
+
+# Backup directory (defaults to memory-banks/backups)  
+MEMORY_BANK_BACKUP=./memory-banks/backups
+```
+
+**Backup Features:**
+
+- Automatic backups every ~5 minutes
+- Timestamped backup files with date and time
+- Manual backup tool with custom directory option
+- Non-intrusive operation (doesn't interrupt normal operations)
+- Configurable backup directory
+
+### Manual Backup Tool
+
+Use the `backup_memory` tool to create manual backups:
+
+```json
+{
+  "tool": "backup_memory",
+  "arguments": {
+    "customBackupDir": "/path/to/custom/backup/directory"
+  }
+}
+```
+
+**Backup File Format:**
+
+Backups are saved with format: `memory-bank_YYYY-MM-DD_HH-MM-SS.json`
+
+Example: `project1_2025-06-12_14-30-45.json`
+
+## 🔄 Backup System
+
+### Automatic Backup Configuration
+
+The system includes an automatic backup feature that creates timestamped backups every 5 minutes.
 
 **Environment Variables:**
 ```bash
@@ -138,11 +278,109 @@ MEMORY_BANK_BACKUP=./memory-banks/backups
 ```
 
 **Backup Features:**
-- Automatic backups every ~5 minutes of active project only
-- Organized by project: `backups/[project]/[project]_timestamp.json`
+- Automatic backups every ~5 minutes
+- Timestamped backup files with date and time
 - Manual backup tool with custom directory option
 - Non-intrusive operation (doesn't interrupt normal operations)
 - Configurable backup directory
+
+### Manual Backup Tool
+
+Use the `backup_memory` tool to create manual backups:
+
+```json
+{
+  "tool": "backup_memory",
+  "arguments": {
+    "customBackupDir": "/path/to/custom/backup/directory"  // Optional
+  }
+}
+```
+
+**Backup File Format:**
+Backups are saved with format: `memory-bank_YYYY-MM-DD_HH-MM-SS.json`
+
+Example: `project1_2025-06-12_14-30-45.json`
+
+## 📦 MCP Tools
+
+### Basic Tools
+
+- `list_projects`: List all available projects
+- `backup_memory`: Create a manual backup of all memory bank projects
+- `memory_bank_read`: Read memory content
+- `memory_bank_write`: Create new memory
+- `memory_bank_update`: Update existing memory
+
+### Advanced Tools
+
+- `semantic_search`: Search memory using natural language
+- `context_intelligence`: AI-powered memory suggestions
+- `enhanced_thinking`: Sequential thinking with visual context
+- `creative_analyzer`: Decision analysis with trade-offs
+- `workflow_navigator`: Visual guidance through workflow states
+- `memory_analyzer`: Analyze memory dependencies and suggest cleanup
+
+### New in v3.3.0
+
+- `memory_bank_delete`: Apaga um arquivo `.md` da memória do projeto (filesystem e banco, se habilitado)
+- `memory_bank_update`: Agora aceita o parâmetro opcional `removeText` para remover um trecho específico do `.md` além de adicionar conteúdo
+
+### 🆕 Batch Update Support (v3.3.3)
+
+The `memory_bank_update` tool now supports batch updates. You can update a single file as before, or update multiple files in one call:
+
+#### Single Update Example
+```js
+memory_bank_update({
+  projectName: "my-project",
+  fileName: "notes.md",
+  content: "New content for notes.md"
+})
+```
+
+#### Batch Update Example
+```js
+memory_bank_update({
+  projectName: "my-project",
+  updates: [
+    { fileName: "notes.md", content: "New content for notes.md" },
+    { fileName: "summary.md", content: "Update summary", removeText: "old line" }
+  ]
+})
+```
+
+- The default is single update (fileName + content). For multiple files, use the `updates` array.
+- The optional `removeText` parameter can be used in both modes to remove a specific snippet from a file.
+
+### Exemplo de uso
+
+#### Apagar um arquivo `.md`:
+```javascript
+{
+  "projectName": "meu-projeto",
+  "fileName": "anotacoes.md"
+}
+```
+
+#### Remover trecho específico de um `.md`:
+```javascript
+{
+  "projectName": "meu-projeto",
+  "fileName": "anotacoes.md",
+  "removeText": "trecho a ser removido"
+}
+```
+
+#### Adicionar conteúdo e remover trecho ao mesmo tempo:
+```javascript
+{
+  "projectName": "meu-projeto",
+  "fileName": "anotacoes.md",
+  "content": "novo conteúdo a ser adicionado",
+  "removeText": "trecho antigo"
+}
+```
 
 ## 🔍 Usage Examples
 
@@ -157,97 +395,50 @@ MEMORY_BANK_BACKUP=./memory-banks/backups
 }
 ```
 
-### Advanced Update Operations
+### Context Intelligence
+
+```javascript
+{
+  "taskDescription": "Implement JWT authentication",
+  "projectName": "my-project",
+  "currentContext": "Working on the backend API",
+  "maxSuggestions": 5
+}
+```
+
+### Memory Analysis
 
 ```javascript
 {
   "projectName": "my-project",
-  "fileName": "notes.md",
-  "content": "New content to add",
-  "operation": "append",  // append, prepend, replace, insert_after, insert_before
-  "targetText": "existing text"  // for insert operations
+  "analysisType": "all",
+  "includeMetrics": true
 }
 ```
-
-### Batch Updates
-
-```javascript
-{
-  "projectName": "my-project",
-  "updates": [
-    { "fileName": "notes.md", "content": "New content", "operation": "append" },
-    { "fileName": "summary.md", "content": "Update summary", "removeText": "old line" }
-  ]
-}
-```
-
-## 🎯 Why This Version?
-
-### 🆚 **vs. Original Memory Bank**
-- ✅ **Single JSON file** per project (easier to manage than multiple .md files)
-- ✅ **15 vs 11 tools** (added reset, summary, optimize, advanced update operations)
-- ✅ **Automatic backup system** (every 5 minutes with configurable directory)
-- ✅ **Advanced update operations** (append, prepend, replace, insert_after, insert_before)
-- ✅ **Production stability** (enhanced error handling and timeout management)
-
-### 🆚 **vs. Database Solutions**
-- ✅ **Zero setup** (no database installation required)
-- ✅ **Portable** (entire memory bank is a single JSON file)
-- ✅ **Transparent** (can view and edit memories directly)
-- ✅ **Version control friendly** (JSON files work great with Git)
-
-### 🆚 **vs. Cloud Solutions** 
-- ✅ **Privacy** (everything stays local)
-- ✅ **No API costs** (built-in embeddings using TF-IDF)
-- ✅ **Offline capable** (works without internet)
-- ✅ **No vendor lock-in** (standard JSON format)
 
 ## 🧠 Memory Management
 
 ### Memory Consolidation
 
-Similar memories are automatically identified and merged using built-in TF-IDF embeddings to maintain a coherent memory bank:
+Similar memories are automatically identified and merged to maintain a coherent memory bank:
 
 1. Vector similarity check when new memories are added
 2. Semantic similarity threshold (configurable)
 3. Content merging preserves unique information
 4. References updated to point to consolidated memory
 
-### Memory Architecture
+### Memory Pruning
 
-```
-┌────────────────┐     ┌─────────────────┐     ┌──────────────┐
-│ Memory Manager │────>│ Built-in TF-IDF │────>│ Single JSON  │
-│                │<────│ Embeddings      │<────│ File/Project │
-└────────────────┘     └─────────────────┘     └──────────────┘
-        │                                             │
-        │                                             │
-┌────────────────┐                            ┌──────────────┐
-│ Optional DB    │<---------------------------│ Backup       │
-│ (if enabled)   │                            │ System       │
-└────────────────┘                            └──────────────┘
-```
+When memory limits are reached:
 
-## 📦 NPM Package
-
-This package is published as `@andrebuzeli/advanced-json-memory-bank` on NPM.
-
-**Quick Start:**
-```bash
-npx @andrebuzeli/advanced-json-memory-bank
-```
-
-**Published Features:**
-- ✅ Zero-dependency mode with built-in embeddings
-- ✅ 15 MCP tools for comprehensive memory management
-- ✅ Automatic backup system every 5 minutes
-- ✅ Single JSON file per project architecture
-- ✅ Production-ready stability enhancements
+1. Importance score calculation based on:
+   - Access frequency
+   - Recency of access
+   - Centrality in reference graph
+   - Custom importance flags
+2. Least important memories are pruned
+3. Core memories are always preserved
 
 ## 📝 License
 
 MIT License - See LICENSE file for details
-
----
-
-*Advanced JSON Memory Bank MCP v1.0.2 - Published on NPM as @andrebuzeli/advanced-json-memory-bank*
