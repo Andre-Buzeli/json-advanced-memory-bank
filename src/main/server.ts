@@ -16,6 +16,7 @@ import { CreativeAnalyzer } from '../core/creative-analyzer.js';
 import dotenv from 'dotenv';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import fs from 'fs';
 
 // Load environment variables
 const __filename = fileURLToPath(import.meta.url);
@@ -33,12 +34,30 @@ export class AdvancedMemoryBankServer {
   private sequentialThinking: SequentialThinking;
   private workflowNavigator: WorkflowNavigator;
   private creativeAnalyzer: CreativeAnalyzer;
+  private version: string = '3.0.4'; // fallback version
+
+  /**
+   * Read version from package.json
+   */
+  private async getVersion(): Promise<string> {
+    try {
+      const packageJsonPath = path.resolve(__dirname, '../../package.json');
+      const packageJsonContent = await fs.promises.readFile(packageJsonPath, 'utf-8');
+      const packageJson = JSON.parse(packageJsonContent);
+      return packageJson.version ?? this.version;
+    } catch {
+      return this.version; // fallback if reading fails
+    }
+  }
 
   constructor() {
+    // Initialize version synchronously first, will be updated in initialize()
+    this.version = '3.0.4';
+    
     this.server = new Server(
       {
         name: '@andrebuzeli/advanced-json-memory-bank',
-        version: '3.0.0',
+        version: this.version,
       },
       {
         capabilities: {
@@ -55,6 +74,15 @@ export class AdvancedMemoryBankServer {
   }
 
   /**
+   * Initialize the server with correct version
+   */
+  async initialize(): Promise<void> {
+    this.version = await this.getVersion();
+    // Update server version
+    (this.server as any).serverInfo.version = this.version;
+  }
+
+  /**
    * Connect to the transport and handle initialization
    */
   async connect(transport: any) {
@@ -67,7 +95,7 @@ export class AdvancedMemoryBankServer {
         this.server.connect(transport)
           .then(() => {
             clearTimeout(connectionTimeout);
-            process.stderr.write(`[@andrebuzeli/advanced-json-memory-bank] v3.0.0 connected successfully\n`);
+            process.stderr.write(`[@andrebuzeli/advanced-json-memory-bank] v${this.version} connected successfully\n`);
             resolve();
           })
           .catch((error) => {

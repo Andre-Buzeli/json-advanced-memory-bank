@@ -1,6 +1,6 @@
 {
   "name": "@andrebuzeli/advanced-json-memory-bank",
-  "version": "3.0.3",
+  "version": "3.0.4",
   "description": "Universal Advanced Memory Bank MCP v3.0.0 - Auto-Project Detection. Zero configuration memory management with 11 streamlined tools. No projectName parameter needed - automatically detects IDE workspace. Clean, simple, efficient.",
   "repository": {
     "type": "git",

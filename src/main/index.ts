@@ -64,6 +64,7 @@ async function startServer() {
     
     // Create and run the server with MCP SDK
     const server = new AdvancedMemoryBankServer();
+    await server.initialize();
     await server.connect(new StdioServerTransport());
   } catch (error: any) {
     // If error is about timeout or dependency, try standalone mode
