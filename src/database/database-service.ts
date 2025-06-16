@@ -282,9 +282,9 @@ export class DatabaseService {
       embedding: memory.embedding || undefined,
       importance: memory.importance,
       accessCount: memory.access_count,
-      createdAt: memory.created_at,
-      lastAccessed: memory.last_accessed,
-      lastUpdated: memory.last_updated,
+      createdAt: new Date(memory.created_at),
+      lastAccessed: new Date(memory.last_accessed),
+      lastUpdated: new Date(memory.last_updated),
       metadata: metadata
     };
 
@@ -354,9 +354,9 @@ export class DatabaseService {
         embedding: memory.embedding || undefined,
         importance: memory.importance,
         accessCount: memory.access_count,
-        createdAt: memory.created_at,
-        lastAccessed: memory.last_accessed,
-        lastUpdated: memory.last_updated,
+        createdAt: new Date(memory.created_at),
+        lastAccessed: new Date(memory.last_accessed),
+        lastUpdated: new Date(memory.last_updated),
         metadata: metadata
       };
       
@@ -494,9 +494,9 @@ export class DatabaseService {
         embedding: result.embedding,
         importance: result.importance,
         accessCount: result.access_count,
-        createdAt: result.created_at,
-        lastAccessed: result.last_accessed,
-        lastUpdated: result.last_updated,
+        createdAt: new Date(result.created_at),
+        lastAccessed: new Date(result.last_accessed),
+        lastUpdated: new Date(result.last_updated),
         metadata: memoryMetadata
       });
       
@@ -585,9 +585,9 @@ export class DatabaseService {
         embedding: result.embedding || undefined,
         importance: result.importance,
         accessCount: result.access_count,
-        createdAt: result.created_at,
-        lastAccessed: result.last_accessed,
-        lastUpdated: result.last_updated,
+        createdAt: new Date(result.created_at),
+        lastAccessed: new Date(result.last_accessed),
+        lastUpdated: new Date(result.last_updated),
         metadata: memoryMetadata
       });
       
@@ -689,9 +689,9 @@ export class DatabaseService {
         embedding: result.embedding || undefined,
         importance: result.importance,
         accessCount: result.access_count,
-        createdAt: result.created_at,
-        lastAccessed: result.last_accessed,
-        lastUpdated: result.last_updated,
+        createdAt: new Date(result.created_at),
+        lastAccessed: new Date(result.last_accessed),
+        lastUpdated: new Date(result.last_updated),
         metadata: memoryMetadata
       });
     }

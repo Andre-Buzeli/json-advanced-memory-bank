@@ -451,7 +451,13 @@ export class SmartSummaryService {
    */
   private getRecentlyModified(memories: MemoryEntry[]): string[] {
     const recent = memories
-      .sort((a, b) => b.lastUpdated.getTime() - a.lastUpdated.getTime())
+      .filter(m => m.lastUpdated) // Filter out entries without lastUpdated
+      .sort((a, b) => {
+        // Ensure we have Date objects
+        const dateA = a.lastUpdated instanceof Date ? a.lastUpdated : new Date(a.lastUpdated);
+        const dateB = b.lastUpdated instanceof Date ? b.lastUpdated : new Date(b.lastUpdated);
+        return dateB.getTime() - dateA.getTime();
+      })
       .slice(0, 5)
       .map(m => m.title);
     
