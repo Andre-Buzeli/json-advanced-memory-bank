@@ -1,710 +1,493 @@
 /**
- * Memory manager for Advanced Memory Bank MCP v3.0.0
- * Simplified - Auto project detection, no backup system
+ * Memory Manager v4.0.0 - Dynamic Project Detection
+ * Automatically detects IDE workspace and manages memories dynamically
  */
 
-import dotenv from 'dotenv';
+import fs from 'fs/promises';
+import { existsSync, mkdirSync } from 'fs';
 import path from 'path';
-import { fileURLToPath } from 'url';
-import fs from 'fs-extra';
-import { EmbeddingService } from './embedding-service.js';
-import { ContentAnalysisService } from './content-analysis.js';
-import { SmartSummaryService } from './smart-summary.js';
-import { ProjectDetector } from './project/project-detector.js';
-// Import DatabaseService only when needed to avoid initialization errors
-import type { DatabaseService } from '../database/database-service.js';
-import {
-  MemoryEntry,
-  MemoryMetadata,
-  EnhancedMemoryMetadata,
-  MemorySearchParams,
-  MemorySearchResult,
-  MemoryUpsertParams,
-  MemoryType,
-  MemoryCategory,
-  ImportanceLevel,
-  ProjectJsonStructure,
-  EnhancedProjectStructure,
-  SmartSummary,
-  ContentAnalysis,
-  MemoryTemplate,
-  MemoryRelationships
-} from '../types/index.js';
+import os from 'os';
+import { LRUCache } from 'lru-cache';
 
-// Load environment variables
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-const envPath = path.resolve(__dirname, '../../.env');
-dotenv.config({ path: envPath });
-
-/**
- * Manager for all memory operations v3.0.0
- * Simplified with auto project detection and no backup system
- */
-export class MemoryManager {
-  private dbService: DatabaseService | null;
-  private embeddingService: EmbeddingService;
-  private contentAnalysisService: ContentAnalysisService;
-  private smartSummaryService: SmartSummaryService;
-  private projectDetector: ProjectDetector;
-  private memoryBankRoot: string;
-  private pruningThreshold: number;
-  private similarityThreshold: number;
-  private maxMemoryEntries: number;
-  private jsonCache: Map<string, {data: ProjectJsonStructure, timestamp: number}>;
-  private jsonCacheLifetime: number;
-  
-  constructor() {
-    this.embeddingService = new EmbeddingService();
-    this.contentAnalysisService = new ContentAnalysisService();
-    this.smartSummaryService = new SmartSummaryService();
-    this.projectDetector = new ProjectDetector();
-    
-    this.memoryBankRoot = process.env.MEMORY_BANK_ROOT || './memory-banks';
-    this.pruningThreshold = parseFloat(process.env.MEMORY_PRUNING_THRESHOLD || '0.85');
-    this.similarityThreshold = parseFloat(process.env.MEMORY_SIMILARITY_THRESHOLD || '0.90');
-    this.maxMemoryEntries = parseInt(process.env.MEMORY_MAX_ENTRIES || '1000');
-    this.jsonCache = new Map();
-    this.jsonCacheLifetime = parseInt(process.env.MEMORY_JSON_CACHE_LIFETIME || '60000'); // 1 minuto padrão
-    
-    // Ensure memory bank root directory exists
-    fs.ensureDirSync(this.memoryBankRoot);
-    
-    // Initialize database service with error handling
-    this.dbService = null;
-    
-    // By default, we're using filesystem-only mode (no external dependencies)
-    // Only try to initialize database if explicitly enabled
-    const databaseEnabled = process.env.ENABLE_DATABASE === 'true';
-    
-    if (databaseEnabled) {
-      // Database initialization only if explicitly enabled via ENABLE_DATABASE=true
-      this.initializeDatabase().catch(error => {
-        // Database initialization failed - continue with filesystem fallback
-        // Use process.stderr to avoid contaminating JSON-RPC protocol
-        process.stderr.write(`[MemoryManager] Database initialization failed: ${error}\n`);
-      });
-    }
-  }
-
-  /**
-   * Get current project name (auto-detected from IDE workspace)
-   */
-  getCurrentProjectName(): string {
-    return this.projectDetector.getCurrentProjectName();
-  }
-
-  /**
-   * Get effective project name for all operations
-   */
-  private getEffectiveProjectName(): string {
-    return this.projectDetector.getEffectiveProjectName();
-  }
-
-  /**
-   * Initialize database connection
-   */
-  private async initializeDatabase(): Promise<void> {
-    try {
-      // Dynamic import to avoid circular dependencies
-      const { DatabaseService } = await import('../database/database-service.js');
-      this.dbService = new DatabaseService();
-      
-      if (this.dbService.isReady()) {
-        process.stderr.write(`[MemoryManager] Database service initialized successfully\n`);
-      }
-    } catch (error) {
-      process.stderr.write(`[MemoryManager] Failed to initialize database: ${error}\n`);
-      this.dbService = null;
-    }
-  }
-
-  /**
-   * Get the file path for a project's JSON file
-   */
-  private getProjectJsonPath(projectName?: string): string {
-    const effectiveProjectName = projectName || this.getEffectiveProjectName();
-    return path.join(this.memoryBankRoot, `${effectiveProjectName}.json`);
-  }
-
-  /**
-   * Read project data from JSON file with caching
-   */
-  private async readProjectJson(projectName?: string): Promise<ProjectJsonStructure> {
-    const effectiveProjectName = projectName || this.getEffectiveProjectName();
-    const cacheKey = `project:${effectiveProjectName}`;
-    
-    // Check cache first
-    const cached = this.jsonCache.get(cacheKey);
-    if (cached && (Date.now() - cached.timestamp) < this.jsonCacheLifetime) {
-      return cached.data;
-    }
-
-    const jsonPath = this.getProjectJsonPath(effectiveProjectName);
-    
-    try {
-      if (await fs.pathExists(jsonPath)) {
-        const data = await fs.readJson(jsonPath);
-        
-        // Validate and migrate data structure if needed
-        const validatedData = this.validateAndMigrateProjectStructure(data, effectiveProjectName);
-        
-        // Update cache
-        this.jsonCache.set(cacheKey, {
-          data: validatedData,
-          timestamp: Date.now()
-        });
-        
-        return validatedData;
-      } else {
-        // Create default structure
-        const defaultData = this.createDefaultProjectStructure(effectiveProjectName);
-        await this.writeProjectJson(defaultData, effectiveProjectName);
-        return defaultData;
-      }
-    } catch (error) {
-      process.stderr.write(`[MemoryManager] Error reading project JSON for ${effectiveProjectName}: ${error}\n`);
-      
-      // Return minimal valid structure
-      const fallbackData = this.createDefaultProjectStructure(effectiveProjectName);
-      return fallbackData;
-    }
-  }
-
-  /**
-   * Write project data to JSON file and update cache
-   */
-  private async writeProjectJson(data: ProjectJsonStructure, projectName?: string): Promise<void> {
-    const effectiveProjectName = projectName || this.getEffectiveProjectName();
-    const jsonPath = this.getProjectJsonPath(effectiveProjectName);
-    const cacheKey = `project:${effectiveProjectName}`;
-    
-    try {
-      // Ensure directory exists
-      await fs.ensureDir(path.dirname(jsonPath));
-      
-      // Write to file
-      await fs.writeJson(jsonPath, data, { spaces: 2 });
-      
-      // Update cache
-      this.jsonCache.set(cacheKey, {
-        data,
-        timestamp: Date.now()
-      });
-      
-    } catch (error) {
-      process.stderr.write(`[MemoryManager] Error writing project JSON for ${effectiveProjectName}: ${error}\n`);
-      throw error;
-    }
-  }
-
-  /**
-   * Create default project structure
-   */
-  private createDefaultProjectStructure(projectName: string): ProjectJsonStructure {
-    return {
-      project: projectName,
-      summary: `Project: ${projectName}`,
-      memories: {},
-      workflow: {
-        mode: 'PLAN',
-        complexity: 2,
-        lastTransition: new Date().toISOString()
-      },
-      metadata: {
-        lastUpdated: new Date().toISOString(),
-        totalMemories: 0,
-        version: '3.0.5'
-      }
-    };
-  }
-
-  /**
-   * Validate and migrate project structure if needed
-   */
-  private validateAndMigrateProjectStructure(data: any, projectName: string): ProjectJsonStructure {
-    // Basic validation and migration logic
-    const validated: ProjectJsonStructure = {
-      project: data.project || projectName,
-      summary: data.summary || `Project: ${projectName}`,
-      memories: data.memories || {},
-      workflow: {
-        mode: data.workflow?.mode || 'PLAN',
-        complexity: data.workflow?.complexity || 2,
-        lastTransition: data.workflow?.lastTransition || new Date().toISOString()
-      },
-      metadata: {
-        lastUpdated: new Date().toISOString(),
-        totalMemories: Object.keys(data.memories || {}).length,
-        version: '3.0.5',
-        ...data.metadata
-      }
-    };
-    
-    return validated;
-  }
-
-  /**
-   * Clear cache for specific project or all projects
-   */
-  private clearCache(projectName?: string): void {
-    if (projectName) {
-      const cacheKey = `project:${projectName}`;
-      this.jsonCache.delete(cacheKey);
-    } else {
-      this.jsonCache.clear();
-    }
-  }
-
-  /**
-   * Store a memory entry (auto-detects project)
-   */
-  async storeMemory(title: string, content: string, metadata?: Partial<MemoryMetadata>): Promise<void> {
-    const projectName = this.getEffectiveProjectName();
-    
-    try {
-      // Read current project data
-      const projectData = await this.readProjectJson();
-      
-      // Analyze content for enhanced metadata
-      const analysis = this.contentAnalysisService.analyzeContent(content, title, metadata);
-      const enhancedMetadata = this.contentAnalysisService.generateEnhancedMetadata(content, title, analysis, metadata);
-      
-      // Create memory entry
-      const memoryEntry: MemoryEntry = {
-        title,
-        content,
-        timestamp: new Date().toISOString(),
-        metadata: enhancedMetadata,
-        vector: await this.embeddingService.generateEmbedding(content)
-      };
-      
-      // Store in project data
-      projectData.memories[title] = content;
-      projectData.metadata.lastUpdated = new Date().toISOString();
-      projectData.metadata.totalMemories = Object.keys(projectData.memories).length;
-      
-      // Update project summary
-      const allMemoryEntries = Object.entries(projectData.memories).map(([key, value]) => ({
-        title: key,
-        content: value,
-        timestamp: new Date().toISOString(),
-        metadata: {},
-        vector: []
-      }));
-      const smartSummary = this.smartSummaryService.generateProjectSummary(allMemoryEntries, projectName);
-      projectData.summary = smartSummary.overview;
-      
-      // Save to filesystem
-      await this.writeProjectJson(projectData);
-      
-      // Store in database if available
-      if (this.dbService && this.dbService.isReady()) {
-        await this.dbService.storeMemory(memoryEntry, projectName);
-      }
-      
-    } catch (error) {
-      process.stderr.write(`[MemoryManager] Error storing memory: ${error}\n`);
-      throw error;
-    }
-  }
-
-  /**
-   * Read a memory entry (auto-detects project)
-   */
-  async readMemory(title: string): Promise<string> {
-    const projectName = this.getEffectiveProjectName();
-    
-    try {
-      const projectData = await this.readProjectJson();
-      
-      if (projectData.memories[title]) {
-        return projectData.memories[title];
-      } else {
-        throw new Error(`Memory '${title}' not found in project '${projectName}'`);
-      }
-    } catch (error) {
-      process.stderr.write(`[MemoryManager] Error reading memory: ${error}\n`);
-      throw error;
-    }
-  }
-
-  /**
-   * Update memory with various operations (auto-detects project)
-   */
-  async updateMemory(args: any): Promise<string> {
-    const projectName = this.getEffectiveProjectName();
-    
-    try {
-      // Handle batch updates
-      if (args.updates && Array.isArray(args.updates)) {
-        const results: string[] = [];
-        for (const update of args.updates) {
-          const result = await this.updateSingleMemory(update, projectName);
-          results.push(result);
-        }
-        return results.join('\n');
-      } else {
-        // Single update
-        return await this.updateSingleMemory(args, projectName);
-      }
-    } catch (error) {
-      process.stderr.write(`[MemoryManager] Error updating memory: ${error}\n`);
-      throw error;
-    }
-  }
-
-  /**
-   * Update a single memory entry
-   */
-  private async updateSingleMemory(args: any, projectName: string): Promise<string> {
-    const { fileName, content, operation = 'append', insertAfter, insertBefore, removeText, replaceText } = args;
-    
-    if (!fileName) {
-      throw new Error('fileName is required');
-    }
-    
-    const projectData = await this.readProjectJson();
-    let existingContent = projectData.memories[fileName] || '';
-    
-    // Handle removeText first
-    if (removeText) {
-      existingContent = existingContent.replace(removeText, '');
-    }
-    
-    // Handle replaceText
-    if (replaceText) {
-      existingContent = existingContent.replace(replaceText.find, replaceText.replace);
-    }
-    
-    // Handle content addition
-    if (content) {
-      switch (operation) {
-        case 'prepend':
-          existingContent = content + '\n\n' + existingContent;
-          break;
-        case 'replace':
-          existingContent = content;
-          break;
-        case 'insert_after':
-          if (insertAfter) {
-            existingContent = existingContent.replace(insertAfter, insertAfter + '\n\n' + content);
-          } else {
-            existingContent += '\n\n' + content;
-          }
-          break;
-        case 'insert_before':
-          if (insertBefore) {
-            existingContent = existingContent.replace(insertBefore, content + '\n\n' + insertBefore);
-          } else {
-            existingContent = content + '\n\n' + existingContent;
-          }
-          break;
-        default: // append
-          existingContent += '\n\n' + content;
-          break;
-      }
-    }
-    
-    // Update memory
-    projectData.memories[fileName] = existingContent;
-    projectData.metadata.lastUpdated = new Date().toISOString();
-    
-    await this.writeProjectJson(projectData);
-    
-    return `Memory '${fileName}' updated successfully in project '${projectName}'`;
-  }
-
-  /**
-   * List memories with summaries (auto-detects project)
-   */
-  async listMemoriesWithSummary(): Promise<string> {
-    const projectName = this.getEffectiveProjectName();
-    
-    try {
-      const projectData = await this.readProjectJson();
-      const memories = projectData.memories;
-      const memoryCount = Object.keys(memories).length;
-      
-      if (memoryCount === 0) {
-        return `# 📋 Memories: ${projectName}\n\n**Total:** 0 memories\n\n*No memories found. Create your first memory with memory_bank_write.*\n\n---\n*Updated: ${new Date().toLocaleDateString()}*`;
-      }
-      
-      let result = `# 📋 Memories: ${projectName}\n\n**Total:** ${memoryCount} memories\n\n`;
-      
-      const memoryEntries = Object.entries(memories);
-      memoryEntries.forEach(([title, content], index) => {
-        const summary = this.generateMemorySummary(content);
-        result += `${index + 1}. **${title}** - ${summary}\n`;
-      });
-      
-      result += `\n---\n*Updated: ${new Date().toLocaleDateString()}*`;
-      
-      return result;
-    } catch (error) {
-      process.stderr.write(`[MemoryManager] Error listing memories: ${error}\n`);
-      throw error;
-    }
-  }
-
-  /**
-   * Generate brief summary from memory content
-   */
-  private generateMemorySummary(content: string): string {
-    // Remove markdown formatting
-    let clean = content
-      .replace(/^#+\s*/gm, '') // Remove headers
-      .replace(/\*\*([^*]+)\*\*/g, '$1') // Remove bold
-      .replace(/\*([^*]+)\*/g, '$1') // Remove italic
-      .replace(/`([^`]+)`/g, '$1') // Remove code
-      .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1'); // Remove links
-    
-    // Get first meaningful line
-    const lines = clean.split('\n').filter(line => line.trim().length > 0);
-    const firstLine = lines[0] || 'No content';
-    
-    // Limit to 70 characters
-    if (firstLine.length <= 70) {
-      return firstLine;
-    } else {
-      return firstLine.substring(0, 67) + '...';
-    }
-  }
-
-  /**
-   * Reset project (auto-detects project)
-   */
-  async resetProject(): Promise<void> {
-    const projectName = this.getEffectiveProjectName();
-    
-    try {
-      const defaultData = this.createDefaultProjectStructure(projectName);
-      await this.writeProjectJson(defaultData);
-      this.clearCache(projectName);
-      
-      process.stderr.write(`[MemoryManager] Project '${projectName}' reset successfully\n`);
-    } catch (error) {
-      process.stderr.write(`[MemoryManager] Error resetting project: ${error}\n`);
-      throw error;
-    }
-  }
-
-  /**
-   * Semantic search (auto-detects project)
-   */
-  async semanticSearch(query: string, options: { limit?: number; similarityThreshold?: number } = {}): Promise<MemorySearchResult> {
-    const projectName = this.getEffectiveProjectName();
-    const { limit = 5, similarityThreshold = 0.7 } = options;
-    
-    try {
-      const projectData = await this.readProjectJson();
-      const queryEmbedding = await this.embeddingService.generateEmbedding(query);
-      
-      const results: Array<{ title: string; content: string; similarity: number }> = [];
-      
-      for (const [title, content] of Object.entries(projectData.memories)) {
-        const contentEmbedding = await this.embeddingService.generateEmbedding(content);
-        const similarity = this.embeddingService.calculateSimilarity(queryEmbedding, contentEmbedding);
-        
-        if (similarity >= similarityThreshold) {
-          results.push({ title, content, similarity });
-        }
-      }
-      
-      // Sort by similarity descending
-      results.sort((a, b) => b.similarity - a.similarity);
-      
-      // Limit results
-      const limitedResults = results.slice(0, limit);
-      
-      return {
-        query,
-        results: limitedResults.map(r => ({
-          title: r.title,
-          content: r.content,
-          relevanceScore: r.similarity,
-          summary: this.generateMemorySummary(r.content),
-          metadata: {}
-        })),
-        totalResults: results.length,
-        searchMetadata: {
-          projectName,
-          similarityThreshold,
-          executionTime: Date.now()
-        }
-      };
-    } catch (error) {
-      process.stderr.write(`[MemoryManager] Error in semantic search: ${error}\n`);
-      throw error;
-    }
-  }
-
-  /**
-   * Get context intelligence (auto-detects project)
-   */
-  async getContextIntelligence(taskDescription: string, currentContext?: string, maxSuggestions: number = 5): Promise<any> {
-    const projectName = this.getEffectiveProjectName();
-    
-    try {
-      // Use semantic search to find relevant memories
-      const searchResults = await this.semanticSearch(taskDescription, { limit: maxSuggestions, similarityThreshold: 0.6 });
-      
-      return {
-        taskDescription,
-        projectName,
-        suggestions: searchResults.results.map(r => ({
-          memoryTitle: r.title,
-          relevance: r.relevanceScore,
-          summary: r.summary,
-          reason: `Related to: "${taskDescription}"`
-        })),
-        totalSuggestions: searchResults.results.length,
-        context: currentContext || 'No additional context provided'
-      };
-    } catch (error) {
-      process.stderr.write(`[MemoryManager] Error getting context intelligence: ${error}\n`);
-      throw error;
-    }
-  }
-
-  /**
-   * Analyze memory bank (auto-detects project)
-   */
-  async analyzeMemoryBank(analysisType: string = 'all', includeMetrics: boolean = true): Promise<any> {
-    const projectName = this.getEffectiveProjectName();
-    
-    try {
-      const projectData = await this.readProjectJson();
-      const memories = projectData.memories;
-      
-      const analysis: any = {
-        projectName,
-        analysisType,
-        summary: {
-          totalMemories: Object.keys(memories).length,
-          lastUpdated: projectData.metadata.lastUpdated
-        }
-      };
-      
-      if (analysisType === 'all' || analysisType === 'dependencies') {
-        analysis.dependencies = this.analyzeDependencies(memories);
-      }
-      
-      if (analysisType === 'all' || analysisType === 'orphans') {
-        analysis.orphans = this.analyzeOrphans(memories);
-      }
-      
-      if (analysisType === 'all' || analysisType === 'cleanup') {
-        analysis.cleanup = this.analyzeCleanup(memories);
-      }
-      
-      if (includeMetrics) {
-        analysis.metrics = {
-          averageContentLength: this.calculateAverageContentLength(memories),
-          memoryDistribution: this.analyzeMemoryDistribution(memories),
-          lastActivity: projectData.metadata.lastUpdated
-        };
-      }
-      
-      return analysis;
-    } catch (error) {
-      process.stderr.write(`[MemoryManager] Error analyzing memory bank: ${error}\n`);
-      throw error;
-    }
-  }
-
-  private analyzeDependencies(memories: Record<string, string>): any {
-    // Simple dependency analysis based on content references
-    const dependencies: Record<string, string[]> = {};
-    
-    for (const [title, content] of Object.entries(memories)) {
-      const refs = Object.keys(memories).filter(otherTitle => 
-        otherTitle !== title && content.toLowerCase().includes(otherTitle.toLowerCase())
-      );
-      if (refs.length > 0) {
-        dependencies[title] = refs;
-      }
-    }
-    
-    return dependencies;
-  }
-
-  private analyzeOrphans(memories: Record<string, string>): string[] {
-    // Find memories that are not referenced by others
-    const referenced = new Set<string>();
-    
-    for (const [title, content] of Object.entries(memories)) {
-      for (const otherTitle of Object.keys(memories)) {
-        if (title !== otherTitle && content.toLowerCase().includes(otherTitle.toLowerCase())) {
-          referenced.add(otherTitle);
-        }
-      }
-    }
-    
-    return Object.keys(memories).filter(title => !referenced.has(title));
-  }
-
-  private analyzeCleanup(memories: Record<string, string>): any {
-    const suggestions = [];
-    
-    for (const [title, content] of Object.entries(memories)) {
-      if (content.trim().length < 50) {
-        suggestions.push(`Memory '${title}' has very little content (${content.length} chars)`);
-      }
-      if (content.split('\n').length === 1) {
-        suggestions.push(`Memory '${title}' is only one line - consider expanding`);
-      }
-    }
-    
-    return {
-      suggestions,
-      totalSuggestions: suggestions.length
-    };
-  }
-
-  private calculateAverageContentLength(memories: Record<string, string>): number {
-    const lengths = Object.values(memories).map(content => content.length);
-    return lengths.length > 0 ? lengths.reduce((a, b) => a + b, 0) / lengths.length : 0;
-  }
-
-  private analyzeMemoryDistribution(memories: Record<string, string>): any {
-    const distribution = {
-      short: 0,    // < 200 chars
-      medium: 0,   // 200-1000 chars
-      long: 0      // > 1000 chars
-    };
-    
-    for (const content of Object.values(memories)) {
-      if (content.length < 200) {
-        distribution.short++;
-      } else if (content.length < 1000) {
-        distribution.medium++;
-      } else {
-        distribution.long++;
-      }
-    }
-    
-    return distribution;
-  }
-
-  /**
-   * Cleanup method to properly close resources
-   */
-  cleanup(): void {
-    // Clear caches
-    this.jsonCache.clear();
-    
-    // Close database connection if exists
-    if (this.dbService) {
-      // Assuming database service has a cleanup method
-      try {
-        (this.dbService as any).cleanup?.();
-      } catch (error) {
-        process.stderr.write(`[MemoryManager] Error during database cleanup: ${error}\n`);
-      }
-    }
-  }
+export interface Memory {
+  id: string;
+  content: string;
+  tags: string[];
+  timestamp: number;
+  importance: number;
+  projectContext: string;
 }
 
-// Export for backward compatibility
-export default MemoryManager;
+export interface ProjectContext {
+  name: string;
+  path: string;
+  detectedAt: number;
+}
+
+export class MemoryManager {
+  private readonly cache: LRUCache<string, Memory>;
+  private projectContext: ProjectContext | null = null;
+  private readonly memoryDir: string;
+  private readonly version = '4.0.0';
+
+  constructor() {
+    this.cache = new LRUCache<string, Memory>({
+      max: 1000,
+      ttl: 1000 * 60 * 60 * 24, // 24 hours
+    });
+
+    // Initialize with dynamic project detection
+    this.initializeProjectContext();
+    this.memoryDir = this.getMemoryDirectory();
+    this.ensureMemoryDirectory();
+  }
+
+  /**
+   * Dynamically detect the current project context
+   */
+  private initializeProjectContext(): void {
+    const projectName = this.detectProjectName();
+    const projectPath = this.detectProjectPath();
+
+    this.projectContext = {
+      name: projectName,
+      path: projectPath,
+      detectedAt: Date.now(),
+    };
+  }
+
+  /**
+   * Detect project name from multiple sources
+   */
+  private detectProjectName(): string {
+    try {
+      // Method 1: Check if we're in a VS Code workspace
+      const workspaceName = this.detectVSCodeWorkspace();
+      if (workspaceName) {
+        return this.sanitizeProjectName(workspaceName);
+      }
+
+      // Method 2: Use current directory name
+      const currentDir = process.cwd();
+      const dirName = path.basename(currentDir);
+      
+      // Avoid user directories and common paths
+      if (this.isValidProjectName(dirName)) {
+        return this.sanitizeProjectName(dirName);
+      }
+
+      // Method 3: Check package.json name
+      const packageName = this.detectPackageName();
+      if (packageName) {
+        return this.sanitizeProjectName(packageName);
+      }
+
+      // Fallback: use sanitized directory name
+      return this.sanitizeProjectName(dirName || 'unknown-project');
+    } catch (error) {
+      console.error('[MemoryManager] Error detecting project name:', error);
+      return 'unknown-project';
+    }
+  }
+
+  /**
+   * Detect VS Code workspace name from environment or process
+   */
+  private detectVSCodeWorkspace(): string | null {
+    try {
+      // Check environment variables
+      const workspaceName = process.env.VSCODE_WORKSPACE_NAME;
+      if (workspaceName) {
+        return workspaceName;
+      }
+
+      // Check if running in VS Code context
+      const term = process.env.TERM_PROGRAM;
+      if (term === 'vscode') {
+        const cwd = process.cwd();
+        return path.basename(cwd);
+      }
+
+      return null;
+    } catch {
+      return null;
+    }
+  }
+
+  /**
+   * Detect package.json name
+   */
+  private detectPackageName(): string | null {
+    try {
+      const packagePath = path.join(process.cwd(), 'package.json');
+      if (existsSync(packagePath)) {
+        const packageContent = require(packagePath);
+        const name = packageContent.name;
+        if (name && typeof name === 'string') {
+          // Remove npm scope if present
+          return name.replace(/^@[^/]+\//, '');
+        }
+      }
+      return null;
+    } catch {
+      return null;
+    }
+  }
+
+  /**
+   * Check if a name is valid for a project
+   */
+  private isValidProjectName(name: string): boolean {
+    if (!name || name.length < 2) return false;
+    
+    const invalidNames = [
+      'src', 'dist', 'build', 'out', 'bin', 'lib',
+      'node_modules', 'Users', 'Documents', 'Desktop',
+      'Downloads', 'AppData', 'Program Files', 'Windows',
+      'System32', 'temp', 'tmp', '.', '..'
+    ];
+
+    const lowerName = name.toLowerCase();
+    return !invalidNames.includes(lowerName) && 
+           !lowerName.includes('user') && 
+           !lowerName.includes('admin') &&
+           !/^[a-z]$/.test(lowerName); // Single letter names
+  }
+
+  /**
+   * Sanitize project name for safe file system usage
+   */
+  private sanitizeProjectName(name: string): string {
+    return name
+      .toLowerCase()
+      .replace(/[^a-z0-9\-_]/g, '-')
+      .replace(/^(-+)|(-+)$/g, '')
+      .replace(/-+/g, '-')
+      .substring(0, 50) || 'project';
+  }
+
+  /**
+   * Detect project path
+   */
+  private detectProjectPath(): string {
+    try {
+      // Try to find git root first
+      let currentPath = process.cwd();
+      while (currentPath !== path.dirname(currentPath)) {
+        if (existsSync(path.join(currentPath, '.git'))) {
+          return currentPath;
+        }
+        currentPath = path.dirname(currentPath);
+      }
+
+      // Fallback to current working directory
+      return process.cwd();
+    } catch {
+      return process.cwd();
+    }
+  }
+
+  /**
+   * Get the memory directory path
+   */
+  private getMemoryDirectory(): string {
+    const projectName = this.projectContext?.name ?? 'unknown-project';
+    const homeDir = os.homedir();
+    return path.join(homeDir, '.advanced-memory-bank', projectName);
+  }
+
+  /**
+   * Ensure memory directory exists
+   */
+  private ensureMemoryDirectory(): void {
+    try {
+      if (!existsSync(this.memoryDir)) {
+        mkdirSync(this.memoryDir, { recursive: true });
+      }
+    } catch (error) {
+      console.error('[MemoryManager] Error creating memory directory:', error);
+      throw new Error(`Failed to create memory directory: ${this.memoryDir}`);
+    }
+  }
+
+  /**
+   * Get current project context
+   */
+  getProjectContext(): ProjectContext | null {
+    return this.projectContext;
+  }
+
+  /**
+   * Retrieve memories by tags
+   */
+  async getMemoriesByTags(tags: string[]): Promise<Memory[]> {
+    const allMemories = await this.loadAllMemories();
+    
+    return allMemories.filter(memory => 
+      tags.some(tag => memory.tags.includes(tag))
+    ).sort((a, b) => b.importance - a.importance || b.timestamp - a.timestamp);
+  }
+
+  /**
+   * Get recent memories
+   */
+  async getRecentMemories(limit: number = 10): Promise<Memory[]> {
+    const allMemories = await this.loadAllMemories();
+    
+    allMemories.sort((a, b) => b.timestamp - a.timestamp);
+    return allMemories.slice(0, limit);
+  }
+
+  /**
+   * Delete a memory
+   */
+  async deleteMemory(id: string): Promise<boolean> {
+    try {
+      // Remove from cache
+      this.cache.delete(id);
+
+      // Remove from disk
+      const filePath = path.join(this.memoryDir, `${id}.json`);
+      if (existsSync(filePath)) {
+        await fs.unlink(filePath);
+      }
+
+      return true;
+    } catch (error) {
+      console.error('[MemoryManager] Error deleting memory:', error);
+      return false;
+    }
+  }
+
+  /**
+   * Generate unique memory ID
+   */
+  private generateMemoryId(): string {
+    const timestamp = Date.now().toString(36);
+    const random = Math.random().toString(36).substring(2);
+    return `mem-${timestamp}-${random}`;
+  }
+
+  /**
+   * Persist memory to disk
+   */
+  private async persistMemory(memory: Memory): Promise<void> {
+    try {
+      const filePath = path.join(this.memoryDir, `${memory.id}.json`);
+      await fs.writeFile(filePath, JSON.stringify(memory, null, 2), 'utf-8');
+    } catch (error) {
+      console.error('[MemoryManager] Error persisting memory:', error);
+      throw new Error(`Failed to persist memory: ${memory.id}`);
+    }
+  }
+
+  /**
+   * Load all memories from disk
+   */
+  private async loadAllMemories(): Promise<Memory[]> {
+    try {
+      if (!existsSync(this.memoryDir)) {
+        return [];
+      }
+
+      const files = await fs.readdir(this.memoryDir);
+      const memories: Memory[] = [];
+
+      for (const file of files) {
+        if (file.endsWith('.json')) {
+          try {
+            const filePath = path.join(this.memoryDir, file);
+            const content = await fs.readFile(filePath, 'utf-8');
+            const memory = JSON.parse(content) as Memory;
+            memories.push(memory);
+          } catch (error) {
+            console.error(`[MemoryManager] Error loading memory file ${file}:`, error);
+          }
+        }
+      }
+
+      return memories;
+    } catch (error) {
+      console.error('[MemoryManager] Error loading memories:', error);
+      return [];
+    }
+  }
+
+  /**
+   * Get memory statistics
+   */
+  async getStatistics(): Promise<{
+    totalMemories: number;
+    projectName: string;
+    memoryPath: string;
+    oldestMemory: number | undefined;
+    newestMemory: number | undefined;
+  }> {
+    const memories = await this.loadAllMemories();
+    
+    return {
+      totalMemories: memories.length,
+      projectName: this.projectContext?.name ?? 'unknown',
+      memoryPath: this.memoryDir,
+      oldestMemory: memories.length > 0 ? Math.min(...memories.map(m => m.timestamp)) : undefined,
+      newestMemory: memories.length > 0 ? Math.max(...memories.map(m => m.timestamp)) : undefined,
+    };
+  }
+
+  /**
+   * Clean up old memories
+   */
+  async cleanupOldMemories(maxAge: number = 30 * 24 * 60 * 60 * 1000): Promise<number> {
+    const memories = await this.loadAllMemories();
+    const cutoffTime = Date.now() - maxAge;
+    let deletedCount = 0;
+
+    for (const memory of memories) {
+      if (memory.timestamp < cutoffTime && memory.importance < 5) {
+        const deleted = await this.deleteMemory(memory.id);
+        if (deleted) {
+          deletedCount++;
+        }
+      }
+    }
+
+    return deletedCount;
+  }
+
+  /**
+   * Store memory with simplified interface
+   */
+  async storeMemory(content: string, tags: string[] = [], importance: number = 5): Promise<Memory> {
+    const id = this.generateMemoryId();
+    const memory: Memory = {
+      id,
+      content,
+      tags,
+      importance: Math.max(1, Math.min(10, importance)),
+      timestamp: Date.now(),
+      projectContext: this.projectContext?.name ?? 'unknown',
+    };
+
+    // Store in cache
+    this.cache.set(id, memory);
+
+    // Persist to disk
+    await this.persistMemory(memory);
+
+    return memory;
+  }
+
+  /**
+   * Get a specific memory by ID
+   */
+  async getMemory(id: string): Promise<Memory | null> {
+    // Check cache first
+    const cached = this.cache.get(id);
+    if (cached) {
+      return cached;
+    }
+
+    // Load from disk
+    try {
+      const filePath = path.join(this.memoryDir, `${id}.json`);
+      if (existsSync(filePath)) {
+        const data = await fs.readFile(filePath, 'utf-8');
+        const memory = JSON.parse(data) as Memory;
+        this.cache.set(id, memory);
+        return memory;
+      }
+    } catch (error) {
+      console.error('[MemoryManager] Error loading memory:', error);
+    }
+
+    return null;
+  }
+
+  /**
+   * Search memories with advanced options
+   */
+  async searchMemories(query: string, tags?: string[], limit: number = 10): Promise<Memory[]> {
+    const allMemories = await this.loadAllMemories();
+    const lowerQuery = query.toLowerCase();
+
+    let filtered = allMemories.filter(memory => {
+      const contentMatch = memory.content.toLowerCase().includes(lowerQuery);
+      const tagMatch = memory.tags.some(tag => tag.toLowerCase().includes(lowerQuery));
+      const tagFilter = !tags || tags.length === 0 || tags.some(tag => memory.tags.includes(tag));
+      
+      return (contentMatch || tagMatch) && tagFilter;
+    });
+
+    filtered.sort((a, b) => b.importance - a.importance || b.timestamp - a.timestamp);
+    return filtered.slice(0, limit);
+  }
+
+  /**
+   * List memories with filtering options
+   */
+  async listMemories(tags?: string[], limit: number = 20, sortBy: string = 'timestamp'): Promise<Memory[]> {
+    const allMemories = await this.loadAllMemories();
+
+    let filtered = allMemories;
+    if (tags && tags.length > 0) {
+      filtered = allMemories.filter(memory => 
+        tags.some(tag => memory.tags.includes(tag))
+      );
+    }
+
+    // Sort memories
+    filtered.sort((a, b) => {
+      if (sortBy === 'importance') {
+        return b.importance - a.importance || b.timestamp - a.timestamp;
+      } else {
+        return b.timestamp - a.timestamp;
+      }
+    });
+
+    return filtered.slice(0, limit);
+  }
+
+  /**
+   * Update an existing memory
+   */
+  async updateMemory(id: string, content?: string, tags?: string[], importance?: number): Promise<boolean> {
+    const memory = await this.getMemory(id);
+    if (!memory) {
+      return false;
+    }
+
+    // Update fields
+    if (content !== undefined) memory.content = content;
+    if (tags !== undefined) memory.tags = tags;
+    if (importance !== undefined) memory.importance = Math.max(1, Math.min(10, importance));
+
+    // Update cache
+    this.cache.set(id, memory);
+
+    // Persist to disk
+    await this.persistMemory(memory);
+
+    return true;
+  }
+
+  /**
+   * Get project information
+   */
+  async getProjectInfo(): Promise<{
+    projectName: string;
+    projectPath: string;
+    totalMemories: number;
+    memoryDirectory: string;
+    version: string;
+  }> {
+    const memories = await this.loadAllMemories();
+    
+    return {
+      projectName: this.projectContext?.name ?? 'unknown',
+      projectPath: this.projectContext?.path ?? process.cwd(),
+      totalMemories: memories.length,
+      memoryDirectory: this.memoryDir,
+      version: this.version,
+    };
+  }
+}

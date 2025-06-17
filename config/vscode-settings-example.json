@@ -1,9 +1,0 @@
-{
-  "mcp.servers": {
-    "enhanced-memory-bank": {
-      "command": "node",
-      "args": ["Z:\\MCP\\My MCP\\enhanced-memory-bank-mcp\\dist\\main\\index.js"],
-      "env": {}
-    }
-  }
-}

@@ -1,63 +1,34 @@
 /**
- * Advanced Memory Bank MCP Server v3.0.0
- * Simplified - Auto project detection, no backup system
+ * Advanced Memory Bank MCP Server v4.0.0
+ * Dynamic project detection with streamlined architecture
  */
 
 import { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import {
-  CallToolRequestSchema,
   ListToolsRequestSchema,
-  Tool
+  CallToolRequestSchema,
+  CallToolRequest,
+  CallToolResult,
+  Tool,
 } from '@modelcontextprotocol/sdk/types.js';
+
 import { MemoryManager } from '../core/memory-manager.js';
 import { SequentialThinking } from '../core/sequential-thinking.js';
 import { WorkflowNavigator } from '../core/workflow-navigator.js';
 import { CreativeAnalyzer } from '../core/creative-analyzer.js';
-import dotenv from 'dotenv';
-import path from 'path';
-import { fileURLToPath } from 'url';
-import fs from 'fs';
 
-// Load environment variables
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-const envPath = path.resolve(__dirname, '../../.env');
-dotenv.config({ path: envPath });
-
-/**
- * Advanced Memory Bank MCP Server class v3.0.0
- * Simplified with auto project detection and 11 essential tools
- */
 export class AdvancedMemoryBankServer {
-  private server: Server;
-  private memoryManager: MemoryManager;
-  private sequentialThinking: SequentialThinking;
-  private workflowNavigator: WorkflowNavigator;
-  private creativeAnalyzer: CreativeAnalyzer;
-  private version: string = '3.0.7'; // fallback version
-
-  /**
-   * Read version from package.json
-   */
-  private async getVersion(): Promise<string> {
-    try {
-      const packageJsonPath = path.resolve(__dirname, '../../package.json');
-      const packageJsonContent = await fs.promises.readFile(packageJsonPath, 'utf-8');
-      const packageJson = JSON.parse(packageJsonContent);
-      return packageJson.version ?? this.version;
-    } catch {
-      return this.version; // fallback if reading fails
-    }
-  }
+  private readonly server: Server;
+  private readonly memoryManager: MemoryManager;
+  private readonly sequentialThinking: SequentialThinking;
+  private readonly workflowNavigator: WorkflowNavigator;
+  private readonly creativeAnalyzer: CreativeAnalyzer;
 
   constructor() {
-    // Initialize version synchronously first, will be updated in initialize()
-    this.version = '3.0.7';
-    
     this.server = new Server(
       {
-        name: '@andrebuzeli/advanced-json-memory-bank',
-        version: this.version,
+        name: 'advanced-memory-bank',
+        version: '4.0.0',
       },
       {
         capabilities: {
@@ -66,713 +37,466 @@ export class AdvancedMemoryBankServer {
       }
     );
 
+    // Initialize all managers
     this.memoryManager = new MemoryManager();
-    this.sequentialThinking = new SequentialThinking();
-    this.workflowNavigator = new WorkflowNavigator();
-    this.creativeAnalyzer = new CreativeAnalyzer();
+    this.sequentialThinking = new SequentialThinking(this.memoryManager);
+    this.workflowNavigator = new WorkflowNavigator(this.memoryManager);
+    this.creativeAnalyzer = new CreativeAnalyzer(this.memoryManager);
+
     this.setupToolHandlers();
   }
 
-  /**
-   * Initialize the server with correct version
-   */
   async initialize(): Promise<void> {
-    this.version = await this.getVersion();
-    // Update server version safely
-    try {
-      if (this.server && (this.server as any).serverInfo) {
-        (this.server as any).serverInfo.version = this.version;
-      }
-    } catch (error) {
-      // Ignore version update errors - version is already set in constructor
-    }
+    console.log('[AdvancedMemoryBank] Server initialized successfully');
   }
 
-  /**
-   * Connect to the transport and handle initialization
-   */
-  async connect(transport: any) {
-    return new Promise<void>((resolve, reject) => {
-      try {
-        const connectionTimeout = setTimeout(() => {
-          reject(new Error('Connection timeout'));
-        }, 60000);
-
-        this.server.connect(transport)
-          .then(() => {
-            clearTimeout(connectionTimeout);
-            process.stderr.write(`[@andrebuzeli/advanced-json-memory-bank] v${this.version} connected successfully\n`);
-            resolve();
-          })
-          .catch((error) => {
-            clearTimeout(connectionTimeout);
-            process.stderr.write(`[advanced-memory-bank] Connection error: ${error}\n`);
-            reject(error);
-          });
-      } catch (error) {
-        process.stderr.write(`[advanced-memory-bank] Server initialization error: ${error}\n`);
-        reject(error);
-      }
-    });
+  async connect(transport: any): Promise<void> {
+    await this.server.connect(transport);
+    console.log('[AdvancedMemoryBank] Connected via transport');
   }
 
-  /**
-   * Setup MCP tool handlers - v3.0.0 Simplified (11 tools)
-   */
   private setupToolHandlers(): void {
+    // List available tools
     this.server.setRequestHandler(ListToolsRequestSchema, async () => {
       return {
-        tools: [
-          // Core Memory Tools (5) - No projectName parameter needed
-          {
-            name: 'list_memories',
-            description: 'List all memories with brief summaries (auto-detects current project)',
-            inputSchema: {
-              $schema: 'https://json-schema.org/draft-07/schema#',
-              type: 'object',
-              properties: {},
-              required: [],
-            },
-          } as Tool,
-          {
-            name: 'memory_bank_read',
-            description: 'Read memory content from current project',
-            inputSchema: {
-              $schema: 'https://json-schema.org/draft-07/schema#',
-              type: 'object',
-              properties: {
-                fileName: {
-                  type: 'string',
-                  description: 'The name of the memory entry (with or without .md extension)',
-                },
-              },
-              required: ['fileName'],
-            },
-          } as Tool,
-          {
-            name: 'memory_bank_write',
-            description: 'Create new memory entry in current project',
-            inputSchema: {
-              $schema: 'https://json-schema.org/draft-07/schema#',
-              type: 'object',
-              properties: {
-                fileName: {
-                  type: 'string',
-                  description: 'The name of the memory entry (with or without .md extension)',
-                },
-                content: {
-                  type: 'string',
-                  description: 'The content of the memory entry',
-                },
-              },
-              required: ['fileName', 'content'],
-            },
-          } as Tool,
-          {
-            name: 'memory_bank_update',
-            description: 'Update existing memory entry in current project (supports batch update)',
-            inputSchema: {
-              $schema: 'https://json-schema.org/draft-07/schema#',
-              type: 'object',
-              properties: {
-                fileName: {
-                  type: 'string',
-                  description: 'The name of the memory entry (for single update)',
-                },
-                content: {
-                  type: 'string',
-                  description: 'The content to add to the memory entry (for single update)',
-                },
-                operation: {
-                  type: 'string',
-                  enum: ['append', 'prepend', 'replace', 'insert_after', 'insert_before'],
-                  description: 'How to add the content (default: append)',
-                },
-                insertAfter: {
-                  type: 'string',
-                  description: 'Text marker to insert after (used with insert_after operation)',
-                },
-                insertBefore: {
-                  type: 'string',
-                  description: 'Text marker to insert before (used with insert_before operation)',
-                },
-                removeText: {
-                  type: 'string',
-                  description: 'Optional: Text to remove from the memory entry',
-                },
-                replaceText: {
-                  type: 'object',
-                  properties: {
-                    find: {
-                      type: 'string',
-                      description: 'Text to find',
-                    },
-                    replace: {
-                      type: 'string',
-                      description: 'Text to replace with',
-                    },
-                  },
-                  required: ['find', 'replace'],
-                  description: 'Optional: Replace specific text with new text',
-                },
-                updates: {
-                  type: 'array',
-                  items: {
-                    type: 'object',
-                    properties: {
-                      fileName: {
-                        type: 'string',
-                        description: 'The name of the memory entry',
-                      },
-                      content: {
-                        type: 'string',
-                        description: 'The content to add to the memory entry',
-                      },
-                      operation: {
-                        type: 'string',
-                        enum: ['append', 'prepend', 'replace', 'insert_after', 'insert_before'],
-                        description: 'How to add the content (default: append)',
-                      },
-                      insertAfter: {
-                        type: 'string',
-                        description: 'Text marker to insert after',
-                      },
-                      insertBefore: {
-                        type: 'string',
-                        description: 'Text marker to insert before',
-                      },
-                      removeText: {
-                        type: 'string',
-                        description: 'Optional: Text to remove from the memory entry',
-                      },
-                      replaceText: {
-                        type: 'object',
-                        properties: {
-                          find: {
-                            type: 'string',
-                            description: 'Text to find',
-                          },
-                          replace: {
-                            type: 'string',
-                            description: 'Text to replace with',
-                          },
-                        },
-                        required: ['find', 'replace'],
-                      },
-                    },
-                    required: ['fileName', 'content'],
-                  },
-                  description: 'Batch update: array of update operations',
-                },
-              },
-            },
-          } as Tool,
-          {
-            name: 'memory_bank_reset',
-            description: 'Reset/clear all memory entries for current project',
-            inputSchema: {
-              $schema: 'https://json-schema.org/draft-07/schema#',
-              type: 'object',
-              properties: {},
-              required: [],
-            },
-          } as Tool,
-
-          // Intelligence Tools (3)
-          {
-            name: 'semantic_search',
-            description: 'Search memories using natural language with built-in embeddings (current project)',
-            inputSchema: {
-              $schema: 'https://json-schema.org/draft-07/schema#',
-              type: 'object',
-              properties: {
-                query: {
-                  type: 'string',
-                  description: 'Natural language search query',
-                },
-                limit: {
-                  type: 'integer',
-                  description: 'Maximum number of results (default: 5)',
-                  minimum: 1,
-                  maximum: 20,
-                },
-                similarityThreshold: {
-                  type: 'number',
-                  description: 'Minimum similarity score (0-1, default: 0.7)',
-                  minimum: 0,
-                  maximum: 1,
-                },
-              },
-              required: ['query'],
-            },
-          } as Tool,
-          {
-            name: 'context_intelligence',
-            description: 'AI-powered relevant memory suggestions for current project',
-            inputSchema: {
-              $schema: 'https://json-schema.org/draft-07/schema#',
-              type: 'object',
-              properties: {
-                taskDescription: {
-                  type: 'string',
-                  description: 'Current task or question being worked on',
-                },
-                currentContext: {
-                  type: 'string',
-                  description: 'Additional context about current work (optional)',
-                },
-                maxSuggestions: {
-                  type: 'integer',
-                  description: 'Maximum suggestions to return (default: 5)',
-                  minimum: 1,
-                  maximum: 10,
-                },
-              },
-              required: ['taskDescription'],
-            },
-          } as Tool,
-          {
-            name: 'memory_analyzer',
-            description: 'Analyze dependencies, detect orphaned files, suggest cleanup for current project',
-            inputSchema: {
-              $schema: 'https://json-schema.org/draft-07/schema#',
-              type: 'object',
-              properties: {
-                analysisType: {
-                  type: 'string',
-                  enum: ['dependencies', 'orphans', 'cleanup', 'all'],
-                  description: 'Type of analysis to perform (default: all)',
-                },
-                includeMetrics: {
-                  type: 'boolean',
-                  description: 'Include detailed metrics in response (default: true)',
-                },
-              },
-            },
-          } as Tool,
-
-          // Workflow Tools (3)
-          {
-            name: 'enhanced_thinking',
-            description: 'Sequential thinking with visual workflow support',
-            inputSchema: {
-              $schema: 'https://json-schema.org/draft-07/schema#',
-              type: 'object',
-              properties: {
-                thought: {
-                  type: 'string',
-                  description: 'Your current thinking step with enhanced visual context',
-                },
-                thoughtNumber: {
-                  type: 'integer',
-                  description: 'Current thought number',
-                  minimum: 1,
-                },
-                totalThoughts: {
-                  type: 'integer',
-                  description: 'Estimated total thoughts needed',
-                  minimum: 1,
-                },
-                nextThoughtNeeded: {
-                  type: 'boolean',
-                  description: 'Whether another thought step is needed',
-                },
-                mode: {
-                  type: 'string',
-                  enum: ['VAN', 'PLAN', 'CREATIVE', 'IMPLEMENT', 'QA'],
-                  description: 'Current development mode for enhanced workflow',
-                },
-                complexityLevel: {
-                  type: 'integer',
-                  description: 'Project complexity level (1-4)',
-                  minimum: 1,
-                  maximum: 4,
-                },
-                isRevision: {
-                  type: 'boolean',
-                  description: 'Whether this revises previous thinking',
-                },
-                revisesThought: {
-                  type: 'integer',
-                  description: 'Which thought is being reconsidered',
-                  minimum: 1,
-                },
-                branchFromThought: {
-                  type: 'integer',
-                  description: 'Branching point thought number',
-                  minimum: 1,
-                },
-                branchId: {
-                  type: 'string',
-                  description: 'Branch identifier',
-                },
-                needsMoreThoughts: {
-                  type: 'boolean',
-                  description: 'If more thoughts are needed',
-                },
-              },
-              required: ['thought', 'nextThoughtNeeded', 'thoughtNumber', 'totalThoughts'],
-            },
-          } as Tool,
-          {
-            name: 'workflow_navigator',
-            description: 'Navigate through development workflow phases with visual guidance',
-            inputSchema: {
-              $schema: 'https://json-schema.org/draft-07/schema#',
-              type: 'object',
-              properties: {
-                currentMode: {
-                  type: 'string',
-                  enum: ['VAN', 'PLAN', 'CREATIVE', 'IMPLEMENT', 'QA'],
-                  description: 'Current development mode',
-                },
-                targetMode: {
-                  type: 'string',
-                  enum: ['VAN', 'PLAN', 'CREATIVE', 'IMPLEMENT', 'QA'],
-                  description: 'Target development mode',
-                },
-                complexityLevel: {
-                  type: 'integer',
-                  description: 'Project complexity level (optional, defaults to 2)',
-                  minimum: 1,
-                  maximum: 4,
-                },
-              },
-              required: ['currentMode', 'targetMode'],
-            },
-          } as Tool,
-          {
-            name: 'creative_analyzer',
-            description: 'Advanced creative analysis tool with trade-off matrices and decision trees',
-            inputSchema: {
-              $schema: 'https://json-schema.org/draft-07/schema#',
-              type: 'object',
-              properties: {
-                component: {
-                  type: 'string',
-                  description: 'Component or feature being analyzed',
-                },
-                options: {
-                  type: 'array',
-                  items: {
-                    type: 'object',
-                    properties: {
-                      name: {
-                        type: 'string',
-                        description: 'Option name',
-                      },
-                      description: {
-                        type: 'string',
-                        description: 'Option description',
-                      },
-                      pros: {
-                        type: 'array',
-                        items: {
-                          type: 'string',
-                        },
-                        description: 'Advantages of this option',
-                      },
-                      cons: {
-                        type: 'array',
-                        items: {
-                          type: 'string',
-                        },
-                        description: 'Disadvantages of this option',
-                      },
-                    },
-                    required: ['name', 'description'],
-                  },
-                  description: 'Array of options to analyze',
-                },
-                criteria: {
-                  type: 'array',
-                  items: {
-                    type: 'string',
-                  },
-                  description: 'Evaluation criteria for comparison',
-                },
-              },
-              required: ['component', 'options', 'criteria'],
-            },
-          } as Tool,
-        ],
+        tools: this.getAvailableTools(),
       };
     });
 
-    // Tool call handlers (simplified - no projectName parameters)
-    this.server.setRequestHandler(CallToolRequestSchema, async (request) => {
-      try {
-        const { name, arguments: args } = request.params;
+    // Handle tool calls
+    this.server.setRequestHandler(CallToolRequestSchema, async (request: CallToolRequest) => {
+      return await this.handleToolCall(request);
+    });
+  }
 
-        switch (name) {
-          case 'list_memories':
-            return this.listMemories();
+  private getAvailableTools(): Tool[] {
+    return [
+      // Memory Management Tools
+      {
+        name: 'store-memory',
+        description: 'Store new memory with automatic project detection',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            content: { type: 'string', description: 'Memory content to store' },
+            tags: { type: 'array', items: { type: 'string' }, description: 'Tags for categorization' },
+            importance: { type: 'number', minimum: 1, maximum: 10, description: 'Importance level (1-10)' },
+          },
+          required: ['content'],
+        },
+      },
+      {
+        name: 'search-memories',
+        description: 'Search memories by content or tags',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            query: { type: 'string', description: 'Search query' },
+            tags: { type: 'array', items: { type: 'string' }, description: 'Filter by tags' },
+            limit: { type: 'number', minimum: 1, maximum: 100, description: 'Number of results' },
+          },
+          required: ['query'],
+        },
+      },
+      {
+        name: 'get-memory',
+        description: 'Get specific memory by ID',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            id: { type: 'string', description: 'Memory ID' },
+          },
+          required: ['id'],
+        },
+      },
+      {
+        name: 'list-memories',
+        description: 'List all memories with optional filtering',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            tags: { type: 'array', items: { type: 'string' }, description: 'Filter by tags' },
+            limit: { type: 'number', minimum: 1, maximum: 100, description: 'Number of results' },
+            sortBy: { type: 'string', enum: ['timestamp', 'importance'], description: 'Sort criteria' },
+          },
+        },
+      },
+      {
+        name: 'update-memory',
+        description: 'Update existing memory',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            id: { type: 'string', description: 'Memory ID' },
+            content: { type: 'string', description: 'Updated content' },
+            tags: { type: 'array', items: { type: 'string' }, description: 'Updated tags' },
+            importance: { type: 'number', minimum: 1, maximum: 10, description: 'Updated importance' },
+          },
+          required: ['id'],
+        },
+      },
+      {
+        name: 'delete-memory',
+        description: 'Delete memory by ID',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            id: { type: 'string', description: 'Memory ID to delete' },
+          },
+          required: ['id'],
+        },
+      },
+      {
+        name: 'get-project-info',
+        description: 'Get current project context and statistics',
+        inputSchema: {
+          type: 'object',
+          properties: {},
+        },
+      },
 
-          case 'memory_bank_read':
-            return this.readMemoryBankFile(args?.fileName);
+      // Sequential Thinking Tools
+      {
+        name: 'sequential-thinking',
+        description: 'Process complex problems with step-by-step thinking',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            thought: { type: 'string', description: 'Current thinking step' },
+            thoughtNumber: { type: 'number', minimum: 1, description: 'Current thought number' },
+            totalThoughts: { type: 'number', minimum: 1, description: 'Estimated total thoughts' },
+            nextThoughtNeeded: { type: 'boolean', description: 'Whether another thought is needed' },
+            isRevision: { type: 'boolean', description: 'Whether this revises previous thinking' },
+            revisesThought: { type: 'number', minimum: 1, description: 'Which thought is being revised' },
+          },
+          required: ['thought', 'thoughtNumber', 'totalThoughts', 'nextThoughtNeeded'],
+        },
+      },
 
-          case 'memory_bank_write':
-            return this.writeMemoryBankFile(args?.fileName, args?.content);
+      // Workflow Navigation Tools
+      {
+        name: 'navigate-workflow',
+        description: 'Navigate and manage workflow steps',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            action: { type: 'string', enum: ['create', 'next', 'previous', 'jump', 'complete', 'status'] },
+            workflowName: { type: 'string', description: 'Name of the workflow' },
+            stepNumber: { type: 'number', minimum: 1, description: 'Step number for jump action' },
+            stepContent: { type: 'string', description: 'Content for new steps' },
+          },
+          required: ['action'],
+        },
+      },
 
-          case 'memory_bank_update':
-            return this.updateMemoryBankFile(args);
-
-          case 'memory_bank_reset':
-            return this.resetMemoryBank();
-
-          case 'semantic_search':
-            return this.semanticSearch(args?.query, args?.limit, args?.similarityThreshold);
-
-          case 'context_intelligence':
-            return this.contextIntelligence(args?.taskDescription, args?.currentContext, args?.maxSuggestions);
-
-          case 'memory_analyzer':
-            return this.memoryAnalyzer(args?.analysisType, args?.includeMetrics);
-
-          case 'enhanced_thinking':
-            return this.enhancedThinking(args);
-
-          case 'workflow_navigator':
-            return this.navigateWorkflow(args?.currentMode, args?.targetMode, args?.complexityLevel);
-
-          case 'creative_analyzer':
-            return this.analyzeCreatively(args?.component, args?.options, args?.criteria);
-
-          default:
-            throw new Error(`Unknown tool: ${name}`);
-        }
-      } catch (error) {
-        const errorMessage = error instanceof Error ? error.message : String(error);
-        return {
-          content: [
-            {
-              type: 'text',
-              text: `Error executing ${request.params.name}: ${errorMessage}`,
+      // Creative Analysis Tools
+      {
+        name: 'analyze-creative-content',
+        description: 'Analyze content for creative insights and patterns',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            content: { type: 'string', description: 'Content to analyze' },
+            analysisType: { 
+              type: 'string', 
+              enum: ['structure', 'themes', 'style', 'patterns', 'comprehensive'],
+              description: 'Type of analysis to perform'
             },
-          ],
-        };
+            depth: { type: 'string', enum: ['basic', 'detailed', 'comprehensive'], description: 'Analysis depth' },
+          },
+          required: ['content'],
+        },
+      },
+      {
+        name: 'generate-creative-insights',
+        description: 'Generate creative insights based on stored memories',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            theme: { type: 'string', description: 'Theme or topic for insights' },
+            creativityLevel: { type: 'string', enum: ['conservative', 'balanced', 'innovative'], description: 'Level of creativity' },
+            limit: { type: 'number', minimum: 1, maximum: 20, description: 'Number of insights' },
+          },
+          required: ['theme'],
+        },
+      },
+    ];
+  }
+
+  private async handleToolCall(request: CallToolRequest): Promise<CallToolResult> {
+    const { name, arguments: args } = request.params;
+
+    try {
+      switch (name) {
+        // Memory Management
+        case 'store-memory':
+          return await this.handleStoreMemory(args);
+        case 'search-memories':
+          return await this.handleSearchMemories(args);
+        case 'get-memory':
+          return await this.handleGetMemory(args);
+        case 'list-memories':
+          return await this.handleListMemories(args);
+        case 'update-memory':
+          return await this.handleUpdateMemory(args);
+        case 'delete-memory':
+          return await this.handleDeleteMemory(args);
+        case 'get-project-info':
+          return await this.handleGetProjectInfo(args);
+
+        // Sequential Thinking
+        case 'sequential-thinking':
+          return await this.handleSequentialThinking(args);
+
+        // Workflow Navigation
+        case 'navigate-workflow':
+          return await this.handleNavigateWorkflow(args);
+
+        // Creative Analysis
+        case 'analyze-creative-content':
+          return await this.handleAnalyzeCreativeContent(args);
+        case 'generate-creative-insights':
+          return await this.handleGenerateCreativeInsights(args);
+
+        default:
+          throw new Error(`Unknown tool: ${name}`);
       }
-    });
-  }
-
-  // Tool implementation methods (simplified - auto-detect project)
-  private async listMemories() {
-    try {
-      const memories = await this.memoryManager.listMemoriesWithSummary();
+    } catch (error) {
       return {
         content: [
           {
             type: 'text',
-            text: memories,
+            text: `Error executing tool '${name}': ${error instanceof Error ? error.message : String(error)}`,
           },
         ],
+        isError: true,
       };
-    } catch (error) {
-      throw new Error(`Failed to list memories: ${error}`);
     }
   }
 
-  private async readMemoryBankFile(fileName: string) {
-    if (!fileName) {
-      throw new Error('fileName is required');
-    }
+  // Memory Management Handlers
+  private async handleStoreMemory(args: any): Promise<CallToolResult> {
+    const memory = await this.memoryManager.storeMemory(
+      args.content,
+      args.tags ?? [],
+      args.importance ?? 5
+    );
+    
+    return {
+      content: [
+        {
+          type: 'text',
+          text: `Memory stored successfully with ID: ${memory.id}`,
+        },
+      ],
+    };
+  }
 
-    try {
-      const content = await this.memoryManager.readMemory(fileName);
+  private async handleSearchMemories(args: any): Promise<CallToolResult> {
+    const memories = await this.memoryManager.searchMemories(
+      args.query,
+      args.tags,
+      args.limit ?? 10
+    );
+    
+    return {
+      content: [
+        {
+          type: 'text',
+          text: `Found ${memories.length} memories:\n\n${memories.map(m => 
+            `**ID:** ${m.id}\n**Content:** ${m.content}\n**Tags:** ${m.tags.join(', ')}\n**Importance:** ${m.importance}\n---`
+          ).join('\n')}`,
+        },
+      ],
+    };
+  }
+
+  private async handleGetMemory(args: any): Promise<CallToolResult> {
+    const memory = await this.memoryManager.getMemory(args.id);
+    
+    if (!memory) {
       return {
         content: [
           {
             type: 'text',
-            text: content,
+            text: `Memory with ID '${args.id}' not found`,
           },
         ],
+        isError: true,
       };
-    } catch (error) {
-      throw new Error(`Failed to read memory file: ${error}`);
     }
+    
+    return {
+      content: [
+        {
+          type: 'text',
+          text: `**Memory ID:** ${memory.id}\n**Content:** ${memory.content}\n**Tags:** ${memory.tags.join(', ')}\n**Importance:** ${memory.importance}\n**Created:** ${new Date(memory.timestamp).toISOString()}`,
+        },
+      ],
+    };
   }
 
-  private async writeMemoryBankFile(fileName: string, content: string) {
-    if (!fileName || !content) {
-      throw new Error('fileName and content are required');
-    }
+  private async handleListMemories(args: any): Promise<CallToolResult> {
+    const memories = await this.memoryManager.listMemories(
+      args.tags,
+      args.limit ?? 20,
+      args.sortBy ?? 'timestamp'
+    );
+    
+    return {
+      content: [
+        {
+          type: 'text',
+          text: `Found ${memories.length} memories:\n\n${memories.map(m => 
+            `**${m.id}** (${m.importance}/10) - ${m.content.substring(0, 100)}${m.content.length > 100 ? '...' : ''}`
+          ).join('\n')}`,
+        },
+      ],
+    };
+  }
 
-    try {
-      await this.memoryManager.storeMemory(fileName, content);
+  private async handleUpdateMemory(args: any): Promise<CallToolResult> {
+    const success = await this.memoryManager.updateMemory(
+      args.id,
+      args.content,
+      args.tags,
+      args.importance
+    );
+    
+    if (!success) {
       return {
         content: [
           {
             type: 'text',
-            text: `Memory '${fileName}' created successfully in current project`,
+            text: `Memory with ID '${args.id}' not found`,
           },
         ],
+        isError: true,
       };
-    } catch (error) {
-      throw new Error(`Failed to write memory file: ${error}`);
     }
+    
+    return {
+      content: [
+        {
+          type: 'text',
+          text: `Memory '${args.id}' updated successfully`,
+        },
+      ],
+    };
   }
 
-  private async updateMemoryBankFile(args: any) {
-    try {
-      const result = await this.memoryManager.updateMemory(args);
+  private async handleDeleteMemory(args: any): Promise<CallToolResult> {
+    const success = await this.memoryManager.deleteMemory(args.id);
+    
+    if (!success) {
       return {
         content: [
           {
             type: 'text',
-            text: result,
+            text: `Memory with ID '${args.id}' not found`,
           },
         ],
+        isError: true,
       };
-    } catch (error) {
-      throw new Error(`Failed to update memory: ${error}`);
     }
+    
+    return {
+      content: [
+        {
+          type: 'text',
+          text: `Memory '${args.id}' deleted successfully`,
+        },
+      ],
+    };
   }
 
-  private async resetMemoryBank() {
-    try {
-      await this.memoryManager.resetProject();
-      return {
-        content: [
-          {
-            type: 'text',
-            text: 'Project memory reset successfully',
-          },
-        ],
-      };
-    } catch (error) {
-      throw new Error(`Failed to reset project: ${error}`);
-    }
+  private async handleGetProjectInfo(args: any): Promise<CallToolResult> {
+    const info = await this.memoryManager.getProjectInfo();
+    
+    return {
+      content: [
+        {
+          type: 'text',
+          text: `**Project:** ${info.projectName}\n**Path:** ${info.projectPath}\n**Total Memories:** ${info.totalMemories}\n**Memory Directory:** ${info.memoryDirectory}\n**Version:** ${info.version}`,
+        },
+      ],
+    };
   }
 
-  private async semanticSearch(query: string, limit?: number, similarityThreshold?: number) {
-    if (!query) {
-      throw new Error('query is required');
-    }
-
-    try {
-      const results = await this.memoryManager.semanticSearch(query, {
-        limit: limit || 5,
-        similarityThreshold: similarityThreshold || 0.7
-      });
-      return {
-        content: [
-          {
-            type: 'text',
-            text: JSON.stringify(results, null, 2),
-          },
-        ],
-      };
-    } catch (error) {
-      throw new Error(`Failed to perform semantic search: ${error}`);
-    }
+  // Sequential Thinking Handler
+  private async handleSequentialThinking(args: any): Promise<CallToolResult> {
+    const result = await this.sequentialThinking.processThought(
+      args.thought,
+      args.thoughtNumber,
+      args.totalThoughts,
+      args.nextThoughtNeeded,
+      args.isRevision,
+      args.revisesThought
+    );
+    
+    return {
+      content: [
+        {
+          type: 'text',
+          text: `**Thought ${result.thoughtNumber}/${result.totalThoughts}**\n\n${result.content}\n\n**Status:** ${result.status}\n**Next needed:** ${result.nextThoughtNeeded ? 'Yes' : 'No'}`,
+        },
+      ],
+    };
   }
 
-  private async contextIntelligence(taskDescription: string, currentContext?: string, maxSuggestions?: number) {
-    if (!taskDescription) {
-      throw new Error('taskDescription is required');
-    }
-
-    try {
-      const suggestions = await this.memoryManager.getContextIntelligence(
-        taskDescription,
-        currentContext,
-        maxSuggestions || 5
-      );
-      return {
-        content: [
-          {
-            type: 'text',
-            text: JSON.stringify(suggestions, null, 2),
-          },
-        ],
-      };
-    } catch (error) {
-      throw new Error(`Failed to get context intelligence: ${error}`);
-    }
+  // Workflow Navigation Handler
+  private async handleNavigateWorkflow(args: any): Promise<CallToolResult> {
+    const result = await this.workflowNavigator.navigate(
+      args.action,
+      args.workflowName,
+      args.stepNumber,
+      args.stepContent
+    );
+    
+    return {
+      content: [
+        {
+          type: 'text',
+          text: result.message,
+        },
+      ],
+    };
   }
 
-  private async memoryAnalyzer(analysisType?: string, includeMetrics?: boolean) {
-    try {
-      const analysis = await this.memoryManager.analyzeMemoryBank(
-        analysisType || 'all',
-        includeMetrics !== false
-      );
-      return {
-        content: [
-          {
-            type: 'text',
-            text: JSON.stringify(analysis, null, 2),
-          },
-        ],
-      };
-    } catch (error) {
-      throw new Error(`Failed to analyze memory: ${error}`);
-    }
+  // Creative Analysis Handlers
+  private async handleAnalyzeCreativeContent(args: any): Promise<CallToolResult> {
+    const analysis = await this.creativeAnalyzer.analyzeContent(
+      args.content,
+      args.analysisType ?? 'comprehensive',
+      args.depth ?? 'detailed'
+    );
+    
+    return {
+      content: [
+        {
+          type: 'text',
+          text: `**Creative Analysis**\n\n${analysis.summary}\n\n**Key Insights:**\n${analysis.insights.join('\n')}\n\n**Recommendations:**\n${analysis.recommendations.join('\n')}`,
+        },
+      ],
+    };
   }
 
-  private async enhancedThinking(args: any) {
-    try {
-      const result = await this.sequentialThinking.processThought(args);
-      return {
-        content: [
-          {
-            type: 'text',
-            text: JSON.stringify(result, null, 2),
-          },
-        ],
-      };
-    } catch (error) {
-      throw new Error(`Failed to process thought: ${error}`);
-    }
-  }
-
-  private async navigateWorkflow(currentMode: string, targetMode: string, complexityLevel?: number) {
-    if (!currentMode || !targetMode) {
-      throw new Error('currentMode and targetMode are required');
-    }
-
-    try {
-      const navigation = await this.workflowNavigator.navigate({
-        currentMode: currentMode as any,
-        targetMode: targetMode as any,
-        projectName: this.memoryManager.getCurrentProjectName(),
-        complexityLevel: complexityLevel || 2
-      });
-      return {
-        content: [
-          {
-            type: 'text',
-            text: navigation,
-          },
-        ],
-      };
-    } catch (error) {
-      throw new Error(`Failed to navigate workflow: ${error}`);
-    }
-  }
-
-  private async analyzeCreatively(component: string, options: any[], criteria: string[]) {
-    if (!component || !options || !criteria) {
-      throw new Error('component, options, and criteria are required');
-    }
-
-    try {
-      const analysis = await this.creativeAnalyzer.analyze({
-        component,
-        options,
-        criteria,
-        projectName: this.memoryManager.getCurrentProjectName()
-      });
-      return {
-        content: [
-          {
-            type: 'text',
-            text: JSON.stringify(analysis, null, 2),
-          },
-        ],
-      };
-    } catch (error) {
-      throw new Error(`Failed to perform creative analysis: ${error}`);
-    }
+  private async handleGenerateCreativeInsights(args: any): Promise<CallToolResult> {
+    const insights = await this.creativeAnalyzer.generateInsights(
+      args.theme,
+      args.creativityLevel ?? 'balanced',
+      args.limit ?? 5
+    );
+    
+    return {
+      content: [
+        {
+          type: 'text',
+          text: `**Creative Insights for "${args.theme}"**\n\n${insights.map((insight, i) => 
+            `${i + 1}. ${insight}`
+          ).join('\n\n')}`,
+        },
+      ],
+    };
   }
 }
